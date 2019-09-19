@@ -1,8 +1,9 @@
 const config = {
-	"HOST": "localhost/snpdb",
+	"HOST": "localhost",
+	"DB_NAME": "snpdb",
 
 	"SNPS_COLL": "snps",
-	"SNPS_ID_LIST_ATTR": "i",
+	"SNPS_NAME_ATTR": "i",
 	"SNPS_CHROMOSOME_ATTR": "c",
 	"SNPS_POSITION_ATTR": "p",
 	"SNPS_MAPS_ATTR": "m",
@@ -20,6 +21,8 @@ const config = {
 	"MAPS_SNP_LIST_ATTR": "snps",
 
 	"COUNTERS_COLL": "counters",
-	"COUNTERS_SEQ_VALUE_ATTR": "next"
+	"COUNTERS_SEQ_VALUE_ATTR": "next",
+
+	"MAX_SNP_NAMES_PER_QUERY": 100000
 }
 

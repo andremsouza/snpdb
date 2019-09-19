@@ -15,10 +15,10 @@ function keyValueObject(key1, value1, ...args)
 }
 
 
-let db = connect(config.HOST);
+let db = connect(config.HOST + "/" + config.DB_NAME);
 
 db.createCollection(config.SNPS_COLL);
-db[config.SNPS_COLL].createIndex(keyValueObject(config.SNPS_ID_LIST_ATTR, 1));
+db[config.SNPS_COLL].createIndex(keyValueObject(config.SNPS_NAME_ATTR, 1));
 db[config.SNPS_COLL].createIndex(keyValueObject(config.SNPS_CHROMOSOME_ATTR, 1, config.SNPS_POSITION_ATTR, 1));
 db[config.SNPS_COLL].createIndex(keyValueObject(config.SNPS_MAPS_ATTR, 1));
 
