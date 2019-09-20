@@ -26,11 +26,13 @@ db.createCollection(config.INDIVIDUALS_COLL);
 db[config.INDIVIDUALS_COLL].createIndex(keyValueObject(config.INDIVIDUALS_ID_LIST_ATTR, 1));
 db[config.INDIVIDUALS_COLL].createIndex(keyValueObject(config.INDIVIDUALS_SAMPLE_LIST_ATTR, 1), unique=true);
 
-db.createCollection(config.SNPBLOCKS_COLL);
-db[config.SNPBLOCKS_COLL].createIndex(keyValueObject(config.SNPBLOCKS_SAMPLE_ATTR, 1, config.SNPBLOCKS_SNP_LIST_ATTR + ".0." + config.SNPBLOCKS_SNP_ID_INSIDE_LIST, 1));
-
 db.createCollection(config.MAPS_COLL);
 db[config.MAPS_COLL].createIndex(keyValueObject(config.MAPS_SNP_LIST_ATTR, 1));
+
+db.createCollection(config.SAMPLES_COLL)
+
+db.createCollection(config.SNPBLOCKS_COLL);
+db[config.SNPBLOCKS_COLL].createIndex(keyValueObject(config.SNPBLOCKS_SAMPLE_ATTR, 1, config.SNPBLOCKS_SNP_LIST_ATTR + ".0." + config.SNPBLOCKS_SNP_ID_INSIDE_LIST, 1));
 
 /* Collection for generating sequential ids. */
 db.createCollection(config.COUNTERS_COLL);

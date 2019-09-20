@@ -12,17 +12,20 @@ const config = {
 	"INDIVIDUALS_ID_LIST_ATTR": "tatoos",
 	"INDIVIDUALS_SAMPLE_LIST_ATTR": "samples",
 
+	"MAPS_COLL": "maps",
+	"MAPS_SNP_LIST_ATTR": "snps",
+
+    "SAMPLES_COLL": "samples",
+    "SAMPLES_MAP_ATTR": "map",
+    "SAMPLES_ID_ATTR": "id",
+
 	"SNPBLOCKS_COLL": "snpblocks",
 	"SNPBLOCKS_SAMPLE_ATTR": "s",
 	"SNPBLOCKS_SNP_LIST_ATTR": "a",
 	"SNPBLOCKS_SNP_ID_INSIDE_LIST": "i",
-
-	"MAPS_COLL": "maps",
-	"MAPS_SNP_LIST_ATTR": "snps",
+    "SNPBLOCKS_SNP_GENOTYPE_INSIDE_LIST": "g",
 
 	"COUNTERS_COLL": "counters",
-	"COUNTERS_SEQ_VALUE_ATTR": "next",
-
-	"MAX_SNP_NAMES_PER_QUERY": 100000
+	"COUNTERS_SEQ_VALUE_ATTR": "next"
 }
 
