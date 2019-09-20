@@ -5,22 +5,97 @@ from pprint import pprint
 import json
 
 class AbstractImporter(ABC):
+    """Subclasses of this class are able to import files (maps and samples)
+    into the database.
     
+    In order to configure itself, this class expects a "config.js" JSON file
+    on the current working directory.
+    The file is read on initialization and the attributes contained are copied
+    to the class as instance attributes.
+
+    Public methods:
+        import_map: imports a map from a file into the database.
+        import_samples: imports samples from a file into the database.
+    
+    Public abstract methods:
+        read_map: extracts a map from a file.
+        read_samples: extract all samples of a file.
+    """
+
     SAMPLE_DICT_ID = "sid"
     SAMPLE_DICT_GENOTYPE = "gen"
 
     @abstractmethod
     def read_map(self, filename):
+        """Extracts a map from file "filename".
+    
+        It should return a list of SNPs.
+        Each SNP should be a dict which may contain the following keys:
+            self.SNPS_NAME_ATTR: contains the name of the SNP, as given
+                                 by the file.
+            self.SNPS_CHROMOSOME_ATTR: contains the SNP's chromosome,
+                                       if available.
+            self.SNPS_POSITION_ATTR: contains the SNP's position,
+                                     if available.
+        These are the keys used by the database to index and organize itself.
+        Any other key will have no special meaning and will be imported to
+        the database preserving its name. You should not use "_id" as key.
+
+        The map will be imported preserving the order given in the file.
+        """
         pass
 
     @abstractmethod
     def read_samples(self, filename):
+        """Extracts a list of samples from file "filename".
+        
+        It should return a list of samples.
+        Each sample should be a dict containing at least the following special
+        keys:
+            self.SAMPLE_DICT_ID: id of the sample.
+            self.SAMPLE_DICT_GENOTYPE: list of dicts with genotype data.
+                                       Each dict should contain the key
+                                       self.SNPBLOCKS_SNP_GENOTYPE_INSIDE_LIST,
+                                       whose value is the genotype data.
+
+        Any other key will have no special meaning and will be imported to the
+        database preserving its name. You should not use "_id" as key.
+        
+        For each sample, the order of the SNPs in the list should be the same
+        as the order on the map the samples are to be associated with.
+        """
         pass
     
     #TODO: e se quisesse por metadados no mapa?
     def import_map(self, filename, mapname,
                    force_create_new=False,
                    force_use_existing=False):
+        """Imports a map from file to the database. Calls read_map.
+        
+        Attributes:
+            filename: name / path of the file to import.
+            mapname: how the map will be named inside the database.
+            force_create_new=False: if False, for each of the map's SNPs,
+                                    looks for similar SNPs inside the database.
+                                    If at least one is found, asks the user
+                                    whether it wants to create a new SNP or
+                                    use an existing one. If none is found,
+                                    creates a new SNP on the database silently.
+                                    If True, skips similarity checks entirely
+                                    and always creates new SNPs.
+                                    Turning this option on speeds up the
+                                    importing process dramatically.
+            force_use_existing=False: if True, when exactly one similar SNP is
+                                      found, it'll be automatically used.
+                                      If none is found, a new SNP is created.
+                                      If more than one is found, the user is
+                                      asked to choose which to use.
+                                      If False, when one similar SNP is found,
+                                      the user is asked whether to use it or
+                                      create a new one. This attribute and
+                                      the previous one should not be used
+                                      simultaneosly.
+        """
         db = self.__get_db()
         if self.__get_map(mapname) is not None:
             raise Exception("Map name already in use.")
@@ -40,6 +115,15 @@ class AbstractImporter(ABC):
             {"$push": {self.SNPS_MAPS_ATTR: mapname}}) for snp in snps])
         
     def import_samples(self, filename, mapname):
+        """Imports samples from a file to the database. Calls read_samples.
+
+        Attributes:
+            filename: name/path of the file to import.
+            mapname: name of the map to use (must exist on the database).
+        
+        read_samples should return samples with the genotype data in the
+        same order as the map on the database.
+        """
         m = self.__get_map(mapname)
         if m is None:
             raise Exception("Map not found.")
@@ -73,6 +157,15 @@ class AbstractImporter(ABC):
         return json.loads(s)
 
     def __init__(self):
+        """Reads a JSON inside the config.js file on the working directory
+        and initializes instance attributes with its properties.
+        
+        config.js is almost a JSON file. It should follow the format:
+            let config = {
+                JSON OBJECT
+            }
+        due to technical reasons.
+        """
         try:
             for (k, v) in self.__read_config().items():
                 setattr(self, k, v)
