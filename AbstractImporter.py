@@ -5,6 +5,9 @@ from pprint import pprint
 import json
 
 class AbstractImporter(ABC):
+    
+    SAMPLE_DICT_ID = "sid"
+    SAMPLE_DICT_GENOTYPE = "gen"
 
     @abstractmethod
     def read_map(self, filename):
@@ -13,12 +16,13 @@ class AbstractImporter(ABC):
     @abstractmethod
     def read_samples(self, filename):
         pass
-  
+    
+    #TODO: e se quisesse por metadados no mapa?
     def import_map(self, filename, mapname,
                    force_create_new=False,
                    force_use_existing=False):
         db = self.__get_db()
-        if db[self.MAPS_COLL].find_one({"_id": mapname}) is not None:
+        if self.__get_map(mapname) is not None:
             raise Exception("Map name already in use.")
         snps = self.read_map(filename)
         first_new_id = self.__fill_snp_ids(snps, force_create_new, force_use_existing)
@@ -35,8 +39,30 @@ class AbstractImporter(ABC):
         db[self.SNPS_COLL].bulk_write([UpdateOne({"_id": snp["_id"]},
             {"$push": {self.SNPS_MAPS_ATTR: mapname}}) for snp in snps])
         
-    def import_sample(self, filename, mapname):
-        pass 
+    def import_samples(self, filename, mapname):
+        m = self.__get_map(mapname)
+        if m is None:
+            raise Exception("Map not found.")
+        snps = m[self.MAPS_SNP_LIST_ATTR]
+        samples = self.read_samples(filename)
+        db = self.__get_db()
+        for sample in samples:
+            genotype = sample.pop(self.SAMPLE_DICT_GENOTYPE)
+            id = sample.pop(self.SAMPLE_DICT_ID)
+            sample.update({
+                          "_id":{self.SAMPLES_MAP_ATTR: mapname,
+                          self.SAMPLES_ID_ATTR: id}})
+            if len(genotype) != len(snps):
+                raise Exception("Sample genotype and map size mismatch.")
+            db[self.SAMPLES_COLL].insert_one(sample)
+            for i in range(len(genotype)):
+                genotype[i][self.SNPBLOCKS_SNP_ID_INSIDE_LIST] = snps[i]
+            genotype.sort(key=lambda s : s[self.SNPBLOCKS_SNP_ID_INSIDE_LIST])
+            for i in range(0, len(genotype), self.SNPBLOCKS_SNPS_PER_BLOCK):
+                db[self.SNPBLOCKS_COLL].insert_one({
+                    self.SNPBLOCKS_MAP_ATTR: mapname,
+                    self.SNPBLOCKS_SAMPLE_ATTR: id,
+                    self.SNPBLOCKS_SNP_LIST_ATTR: genotype[i:i+self.SNPBLOCKS_SNPS_PER_BLOCK]}) 
 
     def __read_config(self):
         s = "{\n"
@@ -58,6 +84,10 @@ class AbstractImporter(ABC):
         
     def __get_db(self):
         return self.__client[self.DB_NAME]
+
+    def __get_map(self, mapname):
+       db = self.__get_db()
+       return db[self.MAPS_COLL].find_one({"_id": mapname})
     
     def __reserve_snp_ids(self, cnt):
         db = self.__get_db()

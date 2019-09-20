@@ -15,15 +15,17 @@ const config = {
 	"MAPS_COLL": "maps",
 	"MAPS_SNP_LIST_ATTR": "snps",
 
-    "SAMPLES_COLL": "samples",
-    "SAMPLES_MAP_ATTR": "map",
-    "SAMPLES_ID_ATTR": "id",
+	"SAMPLES_COLL": "samples",
+	"SAMPLES_MAP_ATTR": "map",
+	"SAMPLES_ID_ATTR": "id",
 
 	"SNPBLOCKS_COLL": "snpblocks",
+	"SNPBLOCKS_MAP_ATTR": "m",
 	"SNPBLOCKS_SAMPLE_ATTR": "s",
 	"SNPBLOCKS_SNP_LIST_ATTR": "a",
 	"SNPBLOCKS_SNP_ID_INSIDE_LIST": "i",
-    "SNPBLOCKS_SNP_GENOTYPE_INSIDE_LIST": "g",
+	"SNPBLOCKS_SNP_GENOTYPE_INSIDE_LIST": "g",
+	"SNPBLOCKS_SNPS_PER_BLOCK": 10000,
 
 	"COUNTERS_COLL": "counters",
 	"COUNTERS_SEQ_VALUE_ATTR": "next"
