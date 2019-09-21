@@ -9,10 +9,10 @@ class PlinkImporter(AbstractImporter):
                 current = {
                     self.SNPS_NAME_ATTR: id,
                     self.SNPS_CHROMOSOME_ATTR: chrom,
-                    self.SNPS_POSITION_ATTR: pos
+                    self.SNPS_POSITION_ATTR: int(pos)
                 }
                 if dist != "0":
-                    current["dist"] = dist
+                    current["dist"] = int(dist)
                 snps.append(current)
         return snps
 
