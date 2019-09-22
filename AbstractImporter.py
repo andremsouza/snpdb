@@ -29,7 +29,8 @@ class AbstractImporter(ABC):
     def read_map(self, filename):
         """Extracts a map from file "filename".
     
-        It should return a list of SNPs.
+        It should return a tuple (snps, meta), with `snps` being a list
+        of SNPs and `meta` being a dict with map metadata to be included.
         Each SNP should be a dict which may contain the following keys:
             self.SNPS_NAME_ATTR: contains the name of the SNP, as given
                                  by the file.
@@ -42,6 +43,9 @@ class AbstractImporter(ABC):
         the database preserving its name. You should not use "_id" as key.
 
         The map will be imported preserving the order given in the file.
+        
+        As for the `meta` dict, the only special key is self.MAPS_FORMAT_ATTR,
+        which may be used to indicate the format of the file being imported.
         """
         pass
 
@@ -99,15 +103,18 @@ class AbstractImporter(ABC):
         db = self.__get_db()
         if self.__get_map(mapname) is not None:
             raise Exception("Map name already in use.")
-        snps = self.read_map(filename)
+        (snps, meta) = self.read_map(filename)
         first_new_id = self.__fill_snp_ids(snps, force_create_new, force_use_existing)
         
         if first_new_id is None:
             return          # User abort.
         
-        db[self.MAPS_COLL].insert_one(
-            {"_id": mapname,
-            self.MAPS_SNP_LIST_ATTR: [snp["_id"] for snp in snps]})
+        map_doc = {"_id": mapname,
+                  self.MAPS_SNP_LIST_ATTR: [snp["_id"] for snp in snps]}
+        if meta is not None:
+            map_doc.update(meta)
+        db[self.MAPS_COLL].insert_one(map_doc)
+
         new_snps = [snp for snp in snps if snp["_id"] >= first_new_id]
         if len(new_snps) > 0:
             db[self.SNPS_COLL].insert_many(new_snps)

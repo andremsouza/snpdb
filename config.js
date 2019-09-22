@@ -14,6 +14,7 @@ const config = {
 
 	"MAPS_COLL": "maps",
 	"MAPS_SNP_LIST_ATTR": "snps",
+    "MAPS_FORMAT_ATTR": "format",
 
 	"SAMPLES_COLL": "samples",
 	"SAMPLES_MAP_ATTR": "map",

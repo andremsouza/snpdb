@@ -1,6 +1,7 @@
 from AbstractImporter import AbstractImporter
 
 class PlinkImporter(AbstractImporter):
+    
     def read_map(self, filename):
         snps = []
         with open(filename, "r") as f:
@@ -14,7 +15,7 @@ class PlinkImporter(AbstractImporter):
                 if dist != "0":
                     current["dist"] = int(dist)
                 snps.append(current)
-        return snps
+        return (snps, {self.MAPS_FORMAT_ATTR: "PLINK"})
 
     def read_samples(self, filename):
         COLUMN_NAMES = ["fid", self.SAMPLE_DICT_ID, "pid",

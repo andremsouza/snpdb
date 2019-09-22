@@ -1,6 +1,7 @@
 from AbstractImporter import AbstractImporter
 
 class Zero125Importer(AbstractImporter):
+    
     def read_map(self, filename):
         snps = []
         with open(filename, "r") as f:
@@ -13,7 +14,7 @@ class Zero125Importer(AbstractImporter):
                     self.SNPS_POSITION_ATTR: pos
                 }
                 snps.append(current)
-        return snps
+        return (snps, {self.MAPS_FORMAT_ATTR: "0125"})
 
     def read_samples(self, filename):
         samples = []

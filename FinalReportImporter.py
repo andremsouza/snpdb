@@ -1,6 +1,7 @@
 from AbstractImporter import AbstractImporter
 
 class FinalReportImporter(AbstractImporter):
+
     def read_map(self, filename):
         snps = [] 
         with open(filename, "r") as f:
@@ -15,7 +16,7 @@ class FinalReportImporter(AbstractImporter):
                     break
                 prev_sample_id = sample_id
                 snps.append({self.SNPS_NAME_ATTR: snp_id})
-        return snps
+        return (snps, {self.MAPS_FORMAT_ATTR: "FR"}) 
 
     def read_samples(self, filename):
         samples = []
