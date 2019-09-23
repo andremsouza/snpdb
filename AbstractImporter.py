@@ -44,8 +44,10 @@ class AbstractImporter(ABC):
 
         The map will be imported preserving the order given in the file.
         
-        As for the `meta` dict, the only special key is self.MAPS_FORMAT_ATTR,
-        which may be used to indicate the format of the file being imported.
+        As for the `meta` dict, the only special keys is self.MAPS_FORMAT_ATTR,
+        which may be used to indicate the format of the file being imported,
+        and self.MAPS_SIZE_ATTR, which is automatically set to the map's
+        number of SNPs.
         """
         pass
 
@@ -110,7 +112,8 @@ class AbstractImporter(ABC):
             return          # User abort.
         
         map_doc = {"_id": mapname,
-                  self.MAPS_SNP_LIST_ATTR: [snp["_id"] for snp in snps]}
+                  self.MAPS_SNP_LIST_ATTR: [snp["_id"] for snp in snps],
+                  self.MAPS_SIZE_ATTR: len(snps)}
         if meta is not None:
             map_doc.update(meta)
         db[self.MAPS_COLL].insert_one(map_doc)
