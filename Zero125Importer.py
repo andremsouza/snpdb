@@ -11,7 +11,7 @@ class Zero125Importer(AbstractImporter):
                 current = {
                     self.SNPS_NAME_ATTR: id,
                     self.SNPS_CHROMOSOME_ATTR: chrom,
-                    self.SNPS_POSITION_ATTR: pos
+                    self.SNPS_POSITION_ATTR: int(pos)
                 }
                 snps.append(current)
         return (snps, {self.MAPS_FORMAT_ATTR: "0125"})
