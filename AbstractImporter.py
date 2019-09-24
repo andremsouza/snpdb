@@ -106,7 +106,8 @@ class AbstractImporter(ABC):
         if self.__get_map(mapname) is not None:
             raise Exception("Map name already in use.")
         (snps, meta) = self.read_map(filename)
-        first_new_id = self.__fill_snp_ids(snps, force_create_new, force_use_existing)
+        first_new_id = self.__fill_snp_ids(snps, force_create_new,
+                                           force_use_existing)
         
         if first_new_id is None:
             return          # User abort.
@@ -124,12 +125,18 @@ class AbstractImporter(ABC):
         db[self.SNPS_COLL].bulk_write([UpdateOne({"_id": snp["_id"]},
             {"$push": {self.SNPS_MAPS_ATTR: mapname}}) for snp in snps])
         
-    def import_samples(self, filename, mapname):
+    def import_samples(self, filename, mapname, id_map={}):
         """Imports samples from a file to the database. Calls read_samples.
 
         Attributes:
             filename: name/path of the file to import.
             mapname: name of the map to use (must exist on the database).
+            id_map=None: optional dict that associates sample ids with
+                         individual's tatoos. If exactly one individual
+                         on the database has the tatoo, the sample will be
+                         automatically associated with it. If more than one
+                         is, the user is asked to choose. If none is, the
+                         sample is not associated with any individual.
         
         read_samples should return samples with the genotype data in the
         same order as the map on the database.
@@ -143,11 +150,11 @@ class AbstractImporter(ABC):
         for sample in samples:
             genotype = sample.pop(self.SAMPLE_DICT_GENOTYPE)
             id = sample.pop(self.SAMPLE_DICT_ID)
-            sample.update({
-                          "_id":{self.SAMPLES_MAP_ATTR: mapname,
-                          self.SAMPLES_ID_ATTR: id}})
             if len(genotype) != len(snps):
                 raise Exception("Sample genotype and map size mismatch.")
+            sample_key = {self.SAMPLES_MAP_ATTR: mapname,
+                          self.SAMPLES_ID_ATTR: id}
+            sample.update({"_id": sample_key})
             db[self.SAMPLES_COLL].insert_one(sample)
             for i in range(len(genotype)):
                 genotype[i][self.SNPBLOCKS_SNP_ID_INSIDE_LIST] = snps[i]
@@ -156,7 +163,25 @@ class AbstractImporter(ABC):
                 db[self.SNPBLOCKS_COLL].insert_one({
                     self.SNPBLOCKS_MAP_ATTR: mapname,
                     self.SNPBLOCKS_SAMPLE_ATTR: id,
-                    self.SNPBLOCKS_SNP_LIST_ATTR: genotype[i:i+self.SNPBLOCKS_SNPS_PER_BLOCK]}) 
+                    self.SNPBLOCKS_SNP_LIST_ATTR: genotype[i:i+self.SNPBLOCKS_SNPS_PER_BLOCK]})
+            if id in id_map:
+                individuals = self.__find_individuals_by_tatoo(id_map[id])
+                option = 0
+                if len(individuals) > 1:
+                    option = self.__user_individual_choice(id_map[id],
+                                                           individuals)
+                elif len(individuals) == 1:
+                    option = 1
+                if option == 0:
+                    db[self.INDIVIDUALS_COLL].insert_one({
+                        "_id": self.__next_individual_id(),
+                         self.INDIVIDUALS_ID_LIST_ATTR: [id_map[id]],
+                         self.INDIVIDUALS_SAMPLE_LIST_ATTR: [sample_key]})
+                else:
+                    db[self.INDIVIDUALS_COLL].update_one(
+                        {"_id": individuals[option-1]["_id"]},
+                        {"$push": {self.INDIVIDUALS_SAMPLE_LIST_ATTR: sample_key}})
+
 
     def __read_config(self):
         s = "{\n"
@@ -217,7 +242,6 @@ class AbstractImporter(ABC):
         if force_create_new and force_use_existing:
             raise Exception("force_create_new and force_use_existing cannot"
                             " be used simultaneously.") 
-        db = self.__get_db()
         next_id = self.__reserve_snp_ids(len(snps))
         first_new_id = next_id
         for snp in snps:
@@ -244,7 +268,7 @@ class AbstractImporter(ABC):
                     next_id += 1
                     force_create_new = user_choice in {"n", "N"}
                 else:
-                    snp["_id"] = similar[int(user_choice)]["_id"]
+                    snp["_id"] = similar[int(user_choice)-1]["_id"]
         return first_new_id
 
     def __user_snp_choice(self, snp, conflicts, force_use_existing):
@@ -283,3 +307,40 @@ class AbstractImporter(ABC):
             if resp not in options:
                 print("Invalid response.")
         return resp
+    
+    def __find_individuals_by_tatoo(self, tatoo):
+        db = self.__get_db()
+        tatoo_attr = self.INDIVIDUALS_ID_LIST_ATTR
+        res = [] 
+        for ind in db[self.INDIVIDUALS_COLL].find({tatoo_attr: tatoo}):
+            res.append(ind)
+        return res
+    
+    def __next_individual_id(self):
+        db = self.__get_db()
+        doc = db[self.COUNTERS_COLL].find_one_and_update(
+            {"_id": self.INDIVIDUALS_COLL},
+            {"$inc": {self.COUNTERS_SEQ_VALUE_ATTR: 1}})
+        return doc[self.COUNTERS_SEQ_VALUE_ATTR]
+    
+    def __user_individual_choice(self, tatoo, individuals):
+        print("Ambigous match for individual %s:" % tatoo)
+        i = 1
+        for individual in individuals:
+            print("(%d)" % i, end=' ')
+            pprint(individual)
+            i += 1
+        question = "What do to? [0] - create new individual; "
+        question += "[1] to [%d] - use i-th individual: " % (i-1)
+        resp = None
+        while resp == None:
+            try:
+                resp = int(input(question))
+                if resp < 0 or resp > len(individuals):
+                    resp = None
+            except KeyboardInterrupt:
+                return None
+            if resp is None:
+                print("Invalid response.")
+        return resp
+

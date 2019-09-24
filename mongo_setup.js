@@ -24,7 +24,7 @@ db[config.SNPS_COLL].createIndex(keyValueObject(config.SNPS_MAPS_ATTR, 1));
 
 db.createCollection(config.INDIVIDUALS_COLL);
 db[config.INDIVIDUALS_COLL].createIndex(keyValueObject(config.INDIVIDUALS_ID_LIST_ATTR, 1));
-db[config.INDIVIDUALS_COLL].createIndex(keyValueObject(config.INDIVIDUALS_SAMPLE_LIST_ATTR, 1), unique=true);
+db[config.INDIVIDUALS_COLL].createIndex(keyValueObject(config.INDIVIDUALS_SAMPLE_LIST_ATTR, 1));
 
 db.createCollection(config.MAPS_COLL);
 db[config.MAPS_COLL].createIndex(keyValueObject(config.MAPS_SNP_LIST_ATTR, 1));
@@ -37,3 +37,4 @@ db[config.SNPBLOCKS_COLL].createIndex(keyValueObject(config.SNPBLOCKS_SAMPLE_ATT
 /* Collection for generating sequential ids. */
 db.createCollection(config.COUNTERS_COLL);
 db[config.COUNTERS_COLL].insert(keyValueObject("_id", config.SNPS_COLL, config.COUNTERS_SEQ_VALUE_ATTR, NumberInt(0)));
+db[config.COUNTERS_COLL].insert(keyValueObject("_id", config.INDIVIDUALS_COLL, config.COUNTERS_SEQ_VALUE_ATTR, NumberInt(0)));
