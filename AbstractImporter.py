@@ -154,7 +154,7 @@ class AbstractImporter(ABC):
                 raise Exception("Sample genotype and map size mismatch.")
             sample_key = {self.SAMPLES_MAP_ATTR: mapname,
                           self.SAMPLES_ID_ATTR: id}
-            sample.update({"_id": sample_key})
+            sample.update(sample_key)
             db[self.SAMPLES_COLL].insert_one(sample)
             for i in range(len(genotype)):
                 genotype[i][self.SNPBLOCKS_SNP_ID_INSIDE_LIST] = snps[i]
