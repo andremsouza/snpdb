@@ -14,8 +14,8 @@ const config = {
 
 	"MAPS_COLL": "maps",
 	"MAPS_SNP_LIST_ATTR": "snps",
-    "MAPS_FORMAT_ATTR": "format",
-    "MAPS_SIZE_ATTR": "size",
+	"MAPS_FORMAT_ATTR": "format",
+	"MAPS_SIZE_ATTR": "size",
 
 	"SAMPLES_COLL": "samples",
 	"SAMPLES_MAP_ATTR": "map",
@@ -30,6 +30,8 @@ const config = {
 	"SNPBLOCKS_SNPS_PER_BLOCK": 10000,
 
 	"COUNTERS_COLL": "counters",
-	"COUNTERS_SEQ_VALUE_ATTR": "next"
+	"COUNTERS_SEQ_VALUE_ATTR": "next",
+
+	"FILES_INDIVIDUAL_ATTR": "individual"
 }
 

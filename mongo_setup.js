@@ -34,9 +34,11 @@ db[config.SAMPLES_COLL].createIndex(keyValueObject(config.SAMPLES_MAP_ATTR, 1, c
 db[config.SAMPLES_COLL].createIndex(keyValueObject(config.SAMPLES_ID_ATTR, 1))
 
 db.createCollection(config.SNPBLOCKS_COLL);
-db[config.SNPBLOCKS_COLL].createIndex(keyValueObject(config.SNPBLOCKS_SAMPLE_ATTR, 1, config.SNPBLOCKS_SNP_LIST_ATTR + ".0." + config.SNPBLOCKS_SNP_ID_INSIDE_LIST, 1));
+db[config.SNPBLOCKS_COLL].createIndex(keyValueObject(config.SNPBLOCKS_MAP_ATTR, 1, config.SNPBLOCKS_SAMPLE_ATTR, 1, config.SNPBLOCKS_SNP_LIST_ATTR + ".0." + config.SNPBLOCKS_SNP_ID_INSIDE_LIST, 1));
 
 /* Collection for generating sequential ids. */
 db.createCollection(config.COUNTERS_COLL);
 db[config.COUNTERS_COLL].insert(keyValueObject("_id", config.SNPS_COLL, config.COUNTERS_SEQ_VALUE_ATTR, NumberInt(0)));
 db[config.COUNTERS_COLL].insert(keyValueObject("_id", config.INDIVIDUALS_COLL, config.COUNTERS_SEQ_VALUE_ATTR, NumberInt(0)));
+
+db.fs.data.createIndex(keyValueObject(config.FILES_INDIVIDUAL_ATTR, 1))
