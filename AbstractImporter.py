@@ -59,15 +59,17 @@ class AbstractImporter(ABC):
         Each sample should be a dict containing at least the following special
         keys:
             self.SAMPLE_DICT_ID: id of the sample.
-            self.SAMPLE_DICT_GENOTYPE: list of dicts with genotype data.
-                                       Each dict should contain the key
-                                       self.SNPBLOCKS_SNP_GENOTYPE_INSIDE_LIST,
-                                       whose value is the genotype data.
+            self.SAMPLE_DICT_GENOTYPE: should contain either a list of dicts 
+                                       where each dict contains the genotype
+                                       data under the 
+                                       self.SNPBLOCKS_SNP_GENOTYPE_INSIDE_LIST
+                                       key, or a string where each character
+                                       corresponds to the genotype of a SNP.
 
         Any other key will have no special meaning and will be imported to the
         database preserving its name. You should not use "_id" as key.
         
-        For each sample, the order of the SNPs in the list should be the same
+        For each sample, the order of the SNPs in the list/string should be the same
         as the order on the map the samples are to be associated with.
         """
         pass
@@ -155,6 +157,11 @@ class AbstractImporter(ABC):
             sample_key = {self.SAMPLES_MAP_ATTR: mapname,
                           self.SAMPLES_ID_ATTR: id}
             sample.update(sample_key)
+            genotype_was_string = False
+            if isinstance(genotype, str):
+                genotype = [{self.SNPBLOCKS_SNP_GENOTYPE_INSIDE_LIST: c} 
+                           for c in genotype]
+                genotype_was_string = True
             db[self.SAMPLES_COLL].insert_one(sample)
             for i in range(len(genotype)):
                 genotype[i][self.SNPBLOCKS_SNP_ID_INSIDE_LIST] = snps[i]
@@ -164,6 +171,8 @@ class AbstractImporter(ABC):
                     self.SNPBLOCKS_MAP_ATTR: mapname,
                     self.SNPBLOCKS_SAMPLE_ATTR: id,
                     self.SNPBLOCKS_SNP_LIST_ATTR: genotype[i:i+self.SNPBLOCKS_SNPS_PER_BLOCK]})
+            if genotype_was_string:
+                del genotype
             if id in id_map:
                 individuals = self.__find_individuals_by_tatoo(id_map[id])
                 option = 0

@@ -22,10 +22,7 @@ class Zero125Importer(AbstractImporter):
             next(f)
             for line in f:
                 (id, genotype) = line.split()
-                g = [{
-                    self.SNPBLOCKS_SNP_GENOTYPE_INSIDE_LIST: genotype[i]}
-                    for i in range(len(genotype))]
                 samples.append(
                     {self.SAMPLE_DICT_ID: id,
-                    self.SAMPLE_DICT_GENOTYPE: g})
+                    self.SAMPLE_DICT_GENOTYPE: genotype})
         return samples
