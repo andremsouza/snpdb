@@ -74,7 +74,6 @@ class AbstractImporter(ABC):
         """
         pass
     
-    #TODO: e se quisesse por metadados no mapa?
     def import_map(self, filename, mapname,
                    force_create_new=False,
                    force_use_existing=False):
@@ -104,26 +103,32 @@ class AbstractImporter(ABC):
                                       the previous one should not be used
                                       simultaneosly.
         """
-        db = self.__get_db()
         if self.__get_map(mapname) is not None:
             raise Exception("Map name already in use.")
+
+        # Read map from file and find out the SNP's internal ids to be used
+        # (possibly interacting with the user).
         (snps, meta) = self.read_map(filename)
         first_new_id = self.__fill_snp_ids(snps, force_create_new,
-                                           force_use_existing)
-        
+                                           force_use_existing) 
         if first_new_id is None:
-            return          # User abort.
-        
+            return          # User aborted.
+       
+        # Insert new map into maps collection.
         map_doc = {"_id": mapname,
                   self.MAPS_SNP_LIST_ATTR: [snp["_id"] for snp in snps],
                   self.MAPS_SIZE_ATTR: len(snps)}
         if meta is not None:
             map_doc.update(meta)
+        db = self.__get_db()
         db[self.MAPS_COLL].insert_one(map_doc)
-
+        
+        # Insert new SNPs into snps collection.
         new_snps = [snp for snp in snps if snp["_id"] >= first_new_id]
         if len(new_snps) > 0:
             db[self.SNPS_COLL].insert_many(new_snps)
+        
+        # For each SNP (old or new), add the new map to the SNP's map list.
         db[self.SNPS_COLL].bulk_write([UpdateOne({"_id": snp["_id"]},
             {"$push": {self.SNPS_MAPS_ATTR: mapname}}) for snp in snps])
         
@@ -146,33 +151,48 @@ class AbstractImporter(ABC):
         m = self.__get_map(mapname)
         if m is None:
             raise Exception("Map not found.")
+
         snps = m[self.MAPS_SNP_LIST_ATTR]
         samples = self.read_samples(filename)
         db = self.__get_db()
+        
         for sample in samples:
             genotype = sample.pop(self.SAMPLE_DICT_GENOTYPE)
             id = sample.pop(self.SAMPLE_DICT_ID)
             if len(genotype) != len(snps):
                 raise Exception("Sample genotype and map size mismatch.")
+
+            # Prepare sample object to be inserted.
             sample_key = {self.SAMPLES_MAP_ATTR: mapname,
                           self.SAMPLES_ID_ATTR: id}
             sample.update(sample_key)
+
+            # Represent genotype as list of dicts if read_samples didn't do it.
             genotype_was_string = False
             if isinstance(genotype, str):
                 genotype = [{self.SNPBLOCKS_SNP_GENOTYPE_INSIDE_LIST: c} 
                            for c in genotype]
                 genotype_was_string = True
+
             db[self.SAMPLES_COLL].insert_one(sample)
+            
+            # Add SNP id to the dicts that represent each SNP.
             for i in range(len(genotype)):
                 genotype[i][self.SNPBLOCKS_SNP_ID_INSIDE_LIST] = snps[i]
             genotype.sort(key=lambda s : s[self.SNPBLOCKS_SNP_ID_INSIDE_LIST])
+            
+            # Break genotype into blocks and insert into SNP blocks collection.
             for i in range(0, len(genotype), self.SNPBLOCKS_SNPS_PER_BLOCK):
                 db[self.SNPBLOCKS_COLL].insert_one({
                     self.SNPBLOCKS_MAP_ATTR: mapname,
                     self.SNPBLOCKS_SAMPLE_ATTR: id,
                     self.SNPBLOCKS_SNP_LIST_ATTR: genotype[i:i+self.SNPBLOCKS_SNPS_PER_BLOCK]})
+
             if genotype_was_string:
-                del genotype
+                del genotype        # Delete list of dicts to save memory.
+
+            # Try to associate the sample with an individual, possibly
+            # interacting with the user.
             if id in id_map:
                 individuals = self.__find_individuals_by_tatoo(id_map[id])
                 option = 0
