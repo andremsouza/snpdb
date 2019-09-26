@@ -5,12 +5,19 @@ from gridfs import GridFS
 import json
 import os
 
-def read_config():
-    s = "{\n"
-    with open("config.js", "r") as f:
-        next(f)         # Skip first line as it contains an attribution.
+
+def read_config(path="config.js"):
+    s = ""
+    with open(path, "r") as f:
+        jsonBegin = False 
         for line in f:
-            s += line + "\n"
+            if jsonBegin:
+                s += line
+            else:
+                open_bracket = line.find("{")
+                if open_bracket != -1:
+                    jsonBegin = True
+                    s += line[open_bracket:]
     return json.loads(s)
 
 
@@ -81,6 +88,8 @@ def find_individuals(id=None, tatoo=None, sample=None):
     for individual in indc.find(query):
         res.append(individual)
     return res
+
+
 
 
 def find_snp_of_sample(mapname, sample, snp_id):
