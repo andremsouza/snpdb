@@ -22,7 +22,7 @@ def read_config(path="config.js"):
 
 
 config = read_config()
-client = MongoClient(config["HOST"])
+client = MongoClient(config["HOST"], w=1)
 db = client[config["DB_NAME"]]
 snpc = db[config["SNPS_COLL"]]
 mapc = db[config["MAPS_COLL"]]
@@ -55,11 +55,8 @@ def find_snp(id=None, min_chrom=None, max_chrom=None,
         query.update({chrom: chrom_query})
     if len(pos_query) > 0:
         query.update({pos: pos_query})
-        
-    res = []
-    for snp in snpc.find(query):
-        res.append(snp)
-    return res
+    
+    return [snp for snp in snpc.find(query)]
 
 
 
@@ -97,10 +94,7 @@ def find_individuals(id=None, tatoo=None, sample=None):
         query.update({config[INDIVIDUALS_ID_LIST_ATTR]: tatoo})
     if sample is not None:
         query.update({config[INDIVIDUALS_SAMPLE_LIST_ATTR]: sample})
-    res = []
-    for individual in indc.find(query):
-        res.append(individual)
-    return res
+    return [individual for individual in indc.find(query)]
 
 
 
@@ -142,9 +136,7 @@ def list_files(individual_id=None):
         cur = db.fs.files.find({})
     else:
         cur = db.fs.files.find({config["FILES_INDIVIDUAL_ATTR"]: individual_id})
-    for f in cur:
-        res.append(f)
-    return res
+    return [f for f in cur]
 
 
 
@@ -161,17 +153,21 @@ def get_files(files):
 
 def import_map(map_reader, map_name,
                force_create_new=False,
-               force_use_existing=False):
+               force_use_existing=False,
+               report=False):
 
     if len(find_maps(id=map_name)) > 0:
         raise Exception("Map name already in use.")
 
+    # Determine internal IDs for each SNP, possibly with user
+    # interaction.
     nsnps = len(map_reader)
     snp_ids = __fill_snp_ids(map_reader, force_create_new, force_use_existing)
 
     if snp_ids is None:
         return
 
+    # Insert new map into maps collection.
     map_doc = {"_id": map_name,
               config["MAPS_SIZE_ATTR"]: nsnps,
               config["MAPS_SNP_LIST_ATTR"]: [snp_ids[i][0]
@@ -179,18 +175,21 @@ def import_map(map_reader, map_name,
     map_doc.update(map_reader.map_meta())
     mapc.insert_one(map_doc)
 
-
-    snpc.insert_many(
+    # Insert new SNPs into snps collection.
+    result = snpc.insert_many(
         (__adjust_snp(snp, map_reader, snp_ids[i][0])
         for (i, snp) in enumerate(map_reader) if snp_ids[i][1]))
 
-    snpc.bulk_write([UpdateOne({"_id": snp_ids[i][0]},
-        {"$push": {config["SNPS_MAPS_ATTR"]: map_name}}) for i in range(nsnps)])
+    # For each SNP (old or new), add the new map to the SNP's map list.
+    snpc.bulk_write([UpdateOne({"_id": snp_ids[j][0]},
+        {"$push": {config["SNPS_MAPS_ATTR"]: map_name}}) for j in range(nsnps)])
+    
+    if report:
+        print(f"Added map {map_name} with {nsnps} SNPs, " +
+              f"{len(result.inserted_ids)} new SNPs created.")
 
 
-
-
-def import_samples(sample_reader, map_name, id_map={}):
+def import_samples(sample_reader, map_name, id_map={}, report=False):
     try:
         m = find_maps(id=map_name, include_snps=True)[0]
     except IndexError:
@@ -200,6 +199,11 @@ def import_samples(sample_reader, map_name, id_map={}):
     BLOCK_SIZE = config["SNPBLOCKS_SNPS_PER_BLOCK"]
     SNP_ID_LIST = config["SNPBLOCKS_SNP_ID_INSIDE_LIST"]
     
+    new_samples = 0
+    new_blocks = 0
+    new_individuals = 0
+    old_individuals = 0
+
     for sample in sample_reader:
         genotype = sample.pop(sample_reader.SAMPLE_GENOTYPE)
         id = sample.pop(sample_reader.SAMPLE_ID)
@@ -212,7 +216,8 @@ def import_samples(sample_reader, map_name, id_map={}):
         sample.update(sample_key)
 
         samplesc.insert_one(sample)
-        
+        new_samples += 1
+
         # Add SNP id to the dicts that represent each SNP.
         for i in range(len(genotype)):
             genotype[i][SNP_ID_LIST] = snps[i]
@@ -224,6 +229,7 @@ def import_samples(sample_reader, map_name, id_map={}):
                 config["SNPBLOCKS_MAP_ATTR"]: map_name,
                 config["SNPBLOCKS_SAMPLE_ATTR"]: id,
                 config["SNPBLOCKS_SNP_LIST_ATTR"]: genotype[i:i+BLOCK_SIZE]})
+            new_blocks += 1
 
         # Try to associate the sample with an individual, possibly
         # interacting with the user.
@@ -239,12 +245,17 @@ def import_samples(sample_reader, map_name, id_map={}):
                     "_id": __next_individual_id(),
                      config["INDIVIDUALS_ID_LIST_ATTR"]: [id_map[id]],
                      config["INDIVIDUALS_SAMPLE_LIST_ATTR"]: [sample_key]})
+                new_individuals += 1
             else:
                 indc.update_one(
                     {"_id": individuals[option-1]["_id"]},
                     {"$push": {config["INDIVIDUALS_SAMPLE_LIST_ATTR"]: sample_key}})
-
-
+                old_individuals += 1
+        
+    if report:
+        print(f"{new_samples} samples added, {new_blocks} blocks.\n" +
+              f"{new_individuals} individuals created.\n" +
+              f"{old_individuals} pre-existing individuals updated.")
 
 
 def __reserve_snp_ids(cnt):
