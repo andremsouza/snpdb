@@ -1,3 +1,6 @@
+#!/usr/bin/env python3
+
+import argparse
 import random
 import sys
 
@@ -108,4 +111,48 @@ def random_vcf(n, map_size, outfile=sys.stdout, seed=None,
                                   for j in range(n))) +
                         "\n"
                         for i in range(map_size)))
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument("format", help="file format to generate",
+                        choices=["vcf", "fr", "z125map", "z125ped",
+                        "plmap", "plped"])
+    parser.add_argument("-k", help="number of files to generate", 
+                        type=int, default=1)
+    parser.add_argument("-n", type=int, default=0,
+                        help="number of samples in each file, if applicable")
+    parser.add_argument("-m", type=int, help="number of SNPs in each file",
+                        required=True)
+    parser.add_argument("-o", help="Output file prefix")
+    args = parser.parse_args()
+    digits = len(str(args.n))
+
+    for i in range(args.k):
+        filename = args.o + "_" + str(i+1).zfill(digits) + ".txt"
+        print(f"Generating {filename}...")
+        with open(filename, "w+") as f:
+            if args.format == "vcf":
+                random_vcf(args.n, args.m, outfile=f,
+                           start_snps_from_id=1+i*args.m,
+                           start_samples_from_id=1+i*args.n)
+            elif args.format == "fr":
+                random_final_report(args.n, args.m, outfile=f,
+                                    start_snps_from_id=1+i*args.m,
+                                    start_samples_from_id=1+args.n)
+            elif args.format == "z125map":
+                random_0125_map(args.m, outfile=f,
+                                start_from_id=1+i*args.m)
+            elif args.format == "plmap":
+                random_plink_map(args.m, outfile=f,
+                                 start_from_id=1+i*args.m)
+            elif args.format == "z125ped":
+                random_0125_samples(args.n, args.m, outfile=f,
+                                    start_from_id=1+i*args.n)
+            elif args.format == "plped":
+                random_plink_samples(args.n, args.m, outfile=f,
+                                     start_from_id=1+i*args.n)
+            else:
+                raise Exception("Unknown format.")
+                                    
+
 
