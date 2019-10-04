@@ -100,19 +100,22 @@ def find_individuals(id=None, tatoo=None, sample=None):
 
 
 def find_snp_of_sample(mapname, sample, snp_id):
-    fsnp = (config["SNPBLOCKS_SNP_LIST_ATTR"] + 
-           ".0." + config["SNPBLOCKS_SNP_ID_INSIDE_LIST"])
+    GEN = config["SNPBLOCKS_GENOTYPE"]
+    IDS = config["SNPBLOCKS_GENOTYPE_ID_LIST"]
+    FSNP = (config["SNPBLOCKS_GENOTYPE"] + 
+           "." + config["SNPBLOCKS_GENOTYPE_ID_LIST"] + ".0")
+
     block = snpblocksc.find_one({
                                 config["SNPBLOCKS_MAP_ATTR"]: mapname,
                                 config["SNPBLOCKS_SAMPLE_ATTR"]: sample,
-                                fsnp: {"$lte": snp_id}},
-                                sort=[(fsnp, -1)])
+                                FSNP: {"$lte": snp_id}},
+                                sort=[(FSNP, -1)])
     if block is None:
         return "Not found"
     try:
-        res = [x for x in block[config["SNPBLOCKS_SNP_LIST_ATTR"]]
-              if x[config["SNPBLOCKS_SNP_ID_INSIDE_LIST"]] == snp_id][0]
-    except IndexError:
+        i = block[GEN][IDS].index(snp_id)
+        res = {key:block[GEN][key][i] for key in block[GEN]} 
+    except ValueError:
         return None
     return res
 
@@ -196,9 +199,10 @@ def import_samples(sample_reader, map_name, id_map={}, report=False):
         raise Exception("Map not found.") from None
 
     snps = m[config["MAPS_SNP_LIST_ATTR"]]
+    sorted_snps = sorted(snps)
     BLOCK_SIZE = config["SNPBLOCKS_SNPS_PER_BLOCK"]
-    SNP_ID_LIST = config["SNPBLOCKS_SNP_ID_INSIDE_LIST"]
-    
+    GENOTYPE_ID_LIST = config["SNPBLOCKS_GENOTYPE_ID_LIST"]
+
     new_samples = 0
     new_blocks = 0
     new_individuals = 0
@@ -207,8 +211,10 @@ def import_samples(sample_reader, map_name, id_map={}, report=False):
     for sample in sample_reader:
         genotype = sample.pop(sample_reader.SAMPLE_GENOTYPE)
         id = sample.pop(sample_reader.SAMPLE_ID)
-        if len(genotype) != len(snps):
-            raise Exception("Sample genotype and map size mismatch.")
+       
+        for key in genotype:
+            if len(genotype[key]) != len(snps):
+                raise Exception("Sample genotype and map size mismatch.")
 
         # Prepare sample object to be inserted.
         sample_key = {config["SAMPLES_MAP_ATTR"]: map_name,
@@ -218,17 +224,22 @@ def import_samples(sample_reader, map_name, id_map={}, report=False):
         samplesc.insert_one(sample)
         new_samples += 1
 
-        # Add SNP id to the dicts that represent each SNP.
-        for i in range(len(genotype)):
-            genotype[i][SNP_ID_LIST] = snps[i]
-        genotype.sort(key=lambda snp : snp[SNP_ID_LIST])
-        
+        # Sort genotype lists using snp id as key.
+        for key in genotype:
+            genotype[key] = [x for _, x in sorted(zip(snps, genotype[key]))]
+
+        # Add sorted list of snp ids.
+        genotype[GENOTYPE_ID_LIST] = sorted_snps
+       
         # Break genotype into blocks and insert into SNP blocks collection.
         for i in range(0, len(genotype), BLOCK_SIZE):
+            b_genotype = {}
+            for key in genotype:
+                b_genotype[key] = genotype[key][i:i+BLOCK_SIZE]
             snpblocksc.insert_one({
                 config["SNPBLOCKS_MAP_ATTR"]: map_name,
                 config["SNPBLOCKS_SAMPLE_ATTR"]: id,
-                config["SNPBLOCKS_SNP_LIST_ATTR"]: genotype[i:i+BLOCK_SIZE]})
+                config["SNPBLOCKS_GENOTYPE"]: b_genotype})
             new_blocks += 1
 
         # Try to associate the sample with an individual, possibly

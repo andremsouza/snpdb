@@ -12,8 +12,8 @@ class PlinkSampleReader(SampleReader):
                 for (attr_name, attr) in zip(COLUMN_NAMES, tokens[0:6]):
                     if attr != "0":
                         sample[attr_name] = attr
-                g = [{"g": tokens[i] + tokens[i+1]}
-                    for i in range(6, len(tokens), 2)]
+                g = {"g": [tokens[i] + tokens[i+1]
+                          for i in range(6, len(tokens), 2)]}
                 sample[self.SAMPLE_GENOTYPE] = g
                 yield sample
             

@@ -12,21 +12,16 @@ class VcfSampleReader(SampleReader):
                     header = line.split()
                     break
             sample_strs = [header[i] + " " for i in range(9, len(header))]
-            fmt = []
             for line in f:
                 tokens = line.split()
                 if len(tokens) != len(header):
                     raise Exception("Missing column value.")
-                fmt.append(tokens[8].split(":"))
                 for i in range(9, len(tokens)):
                     sample_strs[i-9] += tokens[i] + " "
         for i, sample_str in enumerate(sample_strs):
             snps = sample_str.split()
-            for i in range(1, len(snps)):
-                snps[i] = snps[i].split(":")
      
-            gen = [{fmt[i-1][j]:snps[i][j] for j in range(len(snps[i]))}
-                  for i in range(1, len(snps))]
+            gen = {"g": snps[1:]}
             sample = {self.SAMPLE_ID: snps[0],
                       self.SAMPLE_GENOTYPE: gen}
             yield sample

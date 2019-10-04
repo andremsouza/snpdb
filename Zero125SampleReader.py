@@ -8,8 +8,7 @@ class Zero125SampleReader(SampleReader):
             for line in f:
                 (id, genotype) = line.split()
                 sample = {self.SAMPLE_ID: id,
-                          self.SAMPLE_GENOTYPE: [{"g":genotype[i]}
-                                           for i in range(len(genotype))]}
+                          self.SAMPLE_GENOTYPE: {"g": genotype}}
                 yield sample
     
     def __len__(self):
