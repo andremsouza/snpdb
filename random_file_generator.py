@@ -117,15 +117,23 @@ if __name__ == "__main__":
     parser.add_argument("format", help="file format to generate",
                         choices=["vcf", "fr", "z125map", "z125ped",
                         "plmap", "plped"])
-    parser.add_argument("-k", help="number of files to generate", 
+    parser.add_argument("-k", help="number of files to generate, default 1", 
                         type=int, default=1)
     parser.add_argument("-n", type=int, default=0,
                         help="number of samples in each file, if applicable")
     parser.add_argument("-m", type=int, help="number of SNPs in each file",
                         required=True)
+    parser.add_argument("--first-snp-id", type=int, default=1,
+                        help="number on the ID of the first snp " +
+                        "(following snps will have sequential IDs)" +
+                        ", default 1")
+    parser.add_argument("--first-sample-id", type=int, default=1,
+                        help="number on the ID of the first sample " +
+                        "(following samples will have sequential IDs)" +
+                        ", default 1")
     parser.add_argument("-o", help="Output file prefix")
     args = parser.parse_args()
-    digits = len(str(args.n))
+    digits = len(str(args.k))
 
     for i in range(args.k):
         filename = args.o + "_" + str(i+1).zfill(digits) + ".txt"
@@ -133,26 +141,28 @@ if __name__ == "__main__":
         with open(filename, "w+") as f:
             if args.format == "vcf":
                 random_vcf(args.n, args.m, outfile=f,
-                           start_snps_from_id=1+i*args.m,
-                           start_samples_from_id=1+i*args.n)
+                           start_snps_from_id=args.first_snp_id+ i*args.m,
+                           start_samples_from_id=args.first_sample_id+ i*args.n)
             elif args.format == "fr":
                 random_final_report(args.n, args.m, outfile=f,
-                                    start_snps_from_id=1+i*args.m,
-                                    start_samples_from_id=1+args.n)
+                                    start_snps_from_id=args.first_snp_id + i*args.m,
+                                    start_samples_from_id=args.first_sample_id + i*args.n)
             elif args.format == "z125map":
                 random_0125_map(args.m, outfile=f,
-                                start_from_id=1+i*args.m)
+                                start_from_id=args.first_snp_id + i*args.m)
             elif args.format == "plmap":
                 random_plink_map(args.m, outfile=f,
-                                 start_from_id=1+i*args.m)
+                                 start_from_id=args.first_snp_id + i*args.m)
             elif args.format == "z125ped":
                 random_0125_samples(args.n, args.m, outfile=f,
-                                    start_from_id=1+i*args.n)
+                                    start_from_id=args.first_sample_id 
+                                                  + i * args.n)
             elif args.format == "plped":
                 random_plink_samples(args.n, args.m, outfile=f,
-                                     start_from_id=1+i*args.n)
+                                     start_from_id=args.first_sample_id
+                                                   + i * args.n)
             else:
                 raise Exception("Unknown format.")
-                                    
+
 
 
