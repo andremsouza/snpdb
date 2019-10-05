@@ -269,6 +269,13 @@ def import_samples(sample_reader, map_name, id_map={}, report=False):
               f"{old_individuals} pre-existing individuals updated.")
 
 
+
+
+def get_db_stats(scale=1):
+    return db.command("dbstats", scale=scale)
+
+
+
 def __reserve_snp_ids(cnt):
     doc = countersc.find_one_and_update({"_id": config["SNPS_COLL"]}, 
         {"$inc": {config["COUNTERS_SEQ_VALUE_ATTR"]: cnt}})
