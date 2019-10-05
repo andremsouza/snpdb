@@ -232,7 +232,7 @@ def import_samples(sample_reader, map_name, id_map={}, report=False):
         genotype[GENOTYPE_ID_LIST] = sorted_snps
        
         # Break genotype into blocks and insert into SNP blocks collection.
-        for i in range(0, len(genotype), BLOCK_SIZE):
+        for i in range(0, len(snps), BLOCK_SIZE):
             b_genotype = {}
             for key in genotype:
                 b_genotype[key] = genotype[key][i:i+BLOCK_SIZE]
