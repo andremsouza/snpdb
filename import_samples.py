@@ -16,9 +16,15 @@ VCF = 3
 READERS = [Zero125SampleReader, PlinkSampleReader,
           FinalReportSampleReader, VcfSampleReader]
 
-def import_samples(filename, fileformat, mapname, **kwargs):
-   reader = READERS[fileformat](filename)
-   snpdb.import_samples(reader, mapname, **kwargs)
+def import_samples(filename, fileformat, mapname, idfilename=None, **kwargs):
+    if idfilename is not None:
+        id_map = {}
+        with open(idfilename, "r") as f:
+            for line in f:
+                (sample, individual) = line.split()
+                id_map[sample] = individual
+    reader = READERS[fileformat](filename)
+    snpdb.import_samples(reader, mapname, id_map=id_map, **kwargs)
 
 
 if __name__ == "__main__":

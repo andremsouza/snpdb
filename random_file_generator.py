@@ -112,17 +112,25 @@ def random_vcf(n, map_size, outfile=sys.stdout, seed=None,
                         "\n"
                         for i in range(map_size)))
 
+
+
+
+def id_mapping(n, outfile=sys.stdout,
+               first_sample_id=1):   
+   outfile.writelines((f"{'SAM' + str(first_sample_id + i)}\t" +
+                       f"{'IND' + str(i+1)}\n" for i in range(n)))
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("format", help="file format to generate",
                         choices=["vcf", "fr", "z125map", "z125ped",
-                        "plmap", "plped"])
+                        "plmap", "plped", "idmap"])
     parser.add_argument("-k", help="number of files to generate, default 1", 
                         type=int, default=1)
     parser.add_argument("-n", type=int, default=0,
                         help="number of samples in each file, if applicable")
-    parser.add_argument("-m", type=int, help="number of SNPs in each file",
-                        required=True)
+    parser.add_argument("-m", type=int, help="number of SNPs in each file")
     parser.add_argument("--first-snp-id", type=int, default=1,
                         help="number on the ID of the first snp " +
                         "(following snps will have sequential IDs)" +
@@ -131,7 +139,7 @@ if __name__ == "__main__":
                         help="number on the ID of the first sample " +
                         "(following samples will have sequential IDs)" +
                         ", default 1")
-    parser.add_argument("-o", help="Output file prefix")
+    parser.add_argument("-o", help="Output file prefix", required=True)
     args = parser.parse_args()
     digits = len(str(args.k))
 
@@ -161,6 +169,9 @@ if __name__ == "__main__":
                 random_plink_samples(args.n, args.m, outfile=f,
                                      start_from_id=args.first_sample_id
                                                    + i * args.n)
+            elif args.format == "idmap":
+                id_mapping(args.n, outfile=f,
+                           first_sample_id=args.first_sample_id + i * args.n)
             else:
                 raise Exception("Unknown format.")
 
