@@ -91,9 +91,9 @@ def find_individuals(id=None, tatoo=None, sample=None):
     if id is not None:
         query.update({"_id": id})
     if tatoo is not None:
-        query.update({config[INDIVIDUALS_ID_LIST_ATTR]: tatoo})
+        query.update({config["INDIVIDUALS_ID_LIST_ATTR"]: tatoo})
     if sample is not None:
-        query.update({config[INDIVIDUALS_SAMPLE_LIST_ATTR]: sample})
+        query.update({config["INDIVIDUALS_SAMPLE_LIST_ATTR"]: sample})
     return [individual for individual in indc.find(query)]
 
 
@@ -227,6 +227,8 @@ def import_samples(sample_reader, map_name, id_map={}, report=False):
         # Sort genotype lists using snp id as key.
         for key in genotype:
             genotype[key] = [x for _, x in sorted(zip(snps, genotype[key]))]
+            # TODO: optimize space by storing a space separated string instead of a list.
+            # This will require modifying find_snps_of_sample.
 
         # Add sorted list of snp ids.
         genotype[GENOTYPE_ID_LIST] = sorted_snps
