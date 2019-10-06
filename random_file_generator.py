@@ -124,8 +124,8 @@ def id_mapping(n, outfile=sys.stdout,
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("format", help="file format to generate",
-                        choices=["vcf", "fr", "z125map", "z125ped",
-                        "plmap", "plped", "idmap"])
+                        choices=["vcf", "fr", "0125map", "0125ped",
+                        "plmap", "plped", "ids"])
     parser.add_argument("-k", help="number of files to generate, default 1", 
                         type=int, default=1)
     parser.add_argument("-n", type=int, default=0,
@@ -144,7 +144,7 @@ if __name__ == "__main__":
     digits = len(str(args.k))
 
     for i in range(args.k):
-        filename = args.o + "_" + str(i+1).zfill(digits) + ".txt"
+        filename = args.o + "_" + str(i+1).zfill(digits) + "." + args.format
         print(f"Generating {filename}...")
         with open(filename, "w+") as f:
             if args.format == "vcf":
@@ -155,13 +155,13 @@ if __name__ == "__main__":
                 random_final_report(args.n, args.m, outfile=f,
                                     start_snps_from_id=args.first_snp_id + i*args.m,
                                     start_samples_from_id=args.first_sample_id + i*args.n)
-            elif args.format == "z125map":
+            elif args.format == "0125map":
                 random_0125_map(args.m, outfile=f,
                                 start_from_id=args.first_snp_id + i*args.m)
             elif args.format == "plmap":
                 random_plink_map(args.m, outfile=f,
                                  start_from_id=args.first_snp_id + i*args.m)
-            elif args.format == "z125ped":
+            elif args.format == "0125ped":
                 random_0125_samples(args.n, args.m, outfile=f,
                                     start_from_id=args.first_sample_id 
                                                   + i * args.n)
@@ -169,7 +169,7 @@ if __name__ == "__main__":
                 random_plink_samples(args.n, args.m, outfile=f,
                                      start_from_id=args.first_sample_id
                                                    + i * args.n)
-            elif args.format == "idmap":
+            elif args.format == "ids":
                 id_mapping(args.n, outfile=f,
                            first_sample_id=args.first_sample_id + i * args.n)
             else:
