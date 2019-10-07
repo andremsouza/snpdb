@@ -17,8 +17,8 @@ READERS = [Zero125SampleReader, PlinkSampleReader,
           FinalReportSampleReader, VcfSampleReader]
 
 def import_samples(filename, fileformat, mapname, idfilename=None, **kwargs):
+    id_map = {}
     if idfilename is not None:
-        id_map = {}
         with open(idfilename, "r") as f:
             for line in f:
                 (sample, individual) = line.split()
