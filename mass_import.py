@@ -80,5 +80,5 @@ def mass_import(directory, maps_only=False, **kwargs):
         data = stats["dataSize"]
         storage = stats["storageSize"]
         print(f"{name}: "+
-              f"{t_m:.3f} s / {t_p:.3f} s / " +
-              f"{data:.1f} MiB / {storage:.1f} MiB")
+              f"map: {t_m:.3f} s, ped: {t_p:.3f} s, " +
+              f"db size (raw): {data:.1f} MiB, compressed: {storage:.1f} MiB")
