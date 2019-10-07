@@ -56,7 +56,7 @@ def find_snp(id=None, min_chrom=None, max_chrom=None,
     if len(pos_query) > 0:
         query.update({pos: pos_query})
     
-    return [snp for snp in snpc.find(query)]
+    return list(snpc.find(query))
 
 
 
@@ -82,7 +82,7 @@ def find_maps(id=None, min_size=None, max_size=None, format=None,
         cursor = mapc.find(query,
             {config["MAPS_SNP_LIST_ATTR"]: 0, 
              config["MAPS_SORTED_SNP_LIST_ATTR"]: 0})
-    return [mp for mp in cursor]
+    return list(cursor)
 
 
 
@@ -95,7 +95,7 @@ def find_individuals(id=None, tatoo=None, sample=None):
         query.update({config["INDIVIDUALS_ID_LIST_ATTR"]: tatoo})
     if sample is not None:
         query.update({config["INDIVIDUALS_SAMPLE_LIST_ATTR"]: sample})
-    return [individual for individual in indc.find(query)]
+    return list(indc.find(query))
 
 
 
@@ -111,6 +111,8 @@ def find_snp_of_sample(mapname, sample, snp_id):
                                                             snp_id]},
                                   BLOCK_SIZE: 1}}]
         map = list(mapc.aggregate(pipeline))[0]
+        if map["idx"] == -1:
+            return None
         blk = map["idx"] // map[BLOCK_SIZE]
         pos = map["idx"] % map[BLOCK_SIZE]
     except IndexError:
@@ -123,10 +125,12 @@ def find_snp_of_sample(mapname, sample, snp_id):
                                  config["SNPBLOCKS_SAMPLE_ATTR"]: sample})
     if block is None:
         return None
-    try:
-        res = {key:block[GEN][key][pos] for key in block[GEN]} 
-    except ValueError:
-        return None
+    res = {}
+    for key in block[GEN]:
+        if block[GEN][key][0] == " ":
+            res[key] = block[GEN][key].split()[pos]
+        else:
+            res[key] = block[GEN][key][pos]
     return res
 
 
@@ -138,7 +142,7 @@ def find_sample(id=None, map=None):
         query[config["SAMPLES_ID_ATTR"]] = id
     if map is not None:
         query[config["SAMPLES_MAP_ATTR"]] = map
-    return [sample for sample in samplesc.find(query)]
+    return list(samplesc.find(query))
 
 
 
@@ -159,7 +163,7 @@ def list_files(individual_id=None):
         cur = db.fs.files.find({})
     else:
         cur = db.fs.files.find({config["FILES_INDIVIDUAL_ATTR"]: individual_id})
-    return [f for f in cur]
+    return list(cur)
 
 
 
@@ -223,7 +227,7 @@ def import_samples(sample_reader, map_name, id_map={}, report=False):
 
     snps = m[config["MAPS_SNP_LIST_ATTR"]]
     sorted_snps = m[config["MAPS_SORTED_SNP_LIST_ATTR"]]
-    block_size = m[config["MAPS_BLOCK_SIZE_ATTR"]]
+    bsize = m[config["MAPS_BLOCK_SIZE_ATTR"]]
 
     new_samples = 0
     new_blocks = 0
@@ -248,16 +252,21 @@ def import_samples(sample_reader, map_name, id_map={}, report=False):
 
         # Sort genotype lists using snp id as key.
         for key in genotype:
-            genotype[key] = [x for _, x in sorted(zip(snps, genotype[key]))]
-            # TODO: optimize space by storing a space separated string instead of a list.
-            # This will require modifying find_snps_of_sample.
+            if isinstance(genotype[key], str):
+                genotype[key] = "".join([x for _, x in sorted(zip(snps, genotype[key]))])
+            else:
+                genotype[key] = [str(x) for _, x in
+                                 sorted(zip(snps, genotype[key]))]
 
         # Break genotype into blocks and insert into SNP blocks collection.
         current_block = 0
-        for i in range(0, len(snps), block_size):
+        for i in range(0, len(snps), bsize):
             b_genotype = {}
             for key in genotype:
-                b_genotype[key] = genotype[key][i:i+block_size]
+                if isinstance(genotype[key], str):
+                    b_genotype[key] = genotype[key][i:i+bsize]
+                else:
+                    b_genotype[key] = " " + " ".join(genotype[key][i:i+bsize])
             snpblocksc.insert_one({
                 config["SNPBLOCKS_MAP_ATTR"]: map_name,
                 config["SNPBLOCKS_SAMPLE_ATTR"]: id,
