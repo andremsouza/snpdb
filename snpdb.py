@@ -146,6 +146,56 @@ def find_sample(id=None, map=None):
 
 
 
+
+def get_sample_data(id, map):
+    samples = find_sample(id, map)
+    if len(samples) > 1:
+        raise Exception("Homonymous samples within the same map.")
+    if len(samples) == 0:
+        return None
+    sample = samples[0]
+
+    maps = find_maps(id=map, include_snps=True)
+    if len(maps) == 0:
+        raise Exception("Sample map data is missing.")
+    if len(maps) > 1:
+        raise Exception("Homonymous maps with the same ID.")
+    m = maps[0]
+
+    SNPBLOCKS_MAP = config["SNPBLOCKS_MAP_ATTR"]
+    SNPBLOCKS_SAMPLE = config["SNPBLOCKS_SAMPLE_ATTR"]
+    SNPBLOCKS_NO = config["SNPBLOCKS_BLOCK_NUMBER"]
+    blocks = snpblocksc.find({SNPBLOCKS_MAP: map,
+                              SNPBLOCKS_SAMPLE: id},
+                              sort=[(SNPBLOCKS_NO, 1)])
+    genotype = {}
+    for block in blocks:
+        g = block[config["SNPBLOCKS_GENOTYPE"]]
+        for key in g:
+            if g[key][0] == " ":
+                data = g[key].split()
+            else:
+                data = list(g[key])
+            if key not in genotype:
+                genotype[key] = []
+            genotype[key].extend(data)
+    
+    where = {}
+    for i, snp_id in enumerate(m[config["MAPS_SNP_LIST_ATTR"]]):
+        where[snp_id] = i
+
+    perm = [where[snp_id] for snp_id in m[config["MAPS_SORTED_SNP_LIST_ATTR"]]]
+
+    for key in genotype:
+        if len(genotype[key]) != m[config["MAPS_SIZE_ATTR"]]:
+            raise Exception("Sample genotype and map size mismatch.")
+        genotype[key] = [x for _, x in sorted(zip(perm, genotype[key]))]
+    
+    return genotype
+        
+                
+
+
 def insert_file(file, individual_id=None):
     if individual_id is None:
         gfs.put(file, filename=filename)
@@ -297,8 +347,8 @@ def import_samples(sample_reader, map_name, id_map={}, report=False):
                 old_individuals += 1
         
     if report:
-        print(f"{new_samples} samples added, {new_blocks} blocks.\n" +
-              f"{new_individuals} individuals created.\n" +
+        print(f"{new_samples} samples added, {new_blocks} blocks, " +
+              f"{new_individuals} individuals created, " +
               f"{old_individuals} pre-existing individuals updated.")
 
 
