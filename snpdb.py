@@ -111,7 +111,7 @@ def find_snp_of_sample(mapname, sample, snp_id):
                                 FSNP: {"$lte": snp_id}},
                                 sort=[(FSNP, -1)])
     if block is None:
-        return "Not found"
+        return None
     try:
         i = block[GEN][IDS].index(snp_id)
         res = {key:block[GEN][key][i] for key in block[GEN]} 
@@ -119,6 +119,16 @@ def find_snp_of_sample(mapname, sample, snp_id):
         return None
     return res
 
+
+
+
+def find_sample(id=None, map=None):
+    query = {}
+    if id is not None:
+        query[config["SAMPLES_ID_ATTR"]] = id
+    if map is not None:
+        query[config["SAMPLES_MAP_ATTR"]] = map
+    return [sample for sample in samplesc.find(query)]
 
 
 
