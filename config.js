@@ -14,6 +14,8 @@ const config = {
 
 	"MAPS_COLL": "maps",
 	"MAPS_SNP_LIST_ATTR": "snps",
+    "MAPS_SORTED_SNP_LIST_ATTR": "ssnps",
+    "MAPS_BLOCK_SIZE_ATTR": "block",
 	"MAPS_FORMAT_ATTR": "format",
 	"MAPS_SIZE_ATTR": "size",
 
@@ -23,9 +25,9 @@ const config = {
 
 	"SNPBLOCKS_COLL": "snpblocks",
 	"SNPBLOCKS_MAP_ATTR": "m",
+    "SNPBLOCKS_BLOCK_NUMBER": "no",
 	"SNPBLOCKS_SAMPLE_ATTR": "s",
     "SNPBLOCKS_GENOTYPE": "g",
-    "SNPBLOCKS_GENOTYPE_ID_LIST": "snp_ids",
 	"SNPBLOCKS_SNPS_PER_BLOCK": 10000,
 
 	"COUNTERS_COLL": "counters",

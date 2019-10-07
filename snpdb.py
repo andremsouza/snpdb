@@ -80,7 +80,8 @@ def find_maps(id=None, min_size=None, max_size=None, format=None,
         cursor = mapc.find(query)
     else:
         cursor = mapc.find(query,
-            {config["MAPS_FORMAT_ATTR"]: 1, config["MAPS_SIZE_ATTR"]: 1})
+            {config["MAPS_SNP_LIST_ATTR"]: 0, 
+             config["MAPS_SORTED_SNP_LIST_ATTR"]: 0})
     return [mp for mp in cursor]
 
 
@@ -101,20 +102,29 @@ def find_individuals(id=None, tatoo=None, sample=None):
 
 def find_snp_of_sample(mapname, sample, snp_id):
     GEN = config["SNPBLOCKS_GENOTYPE"]
-    IDS = config["SNPBLOCKS_GENOTYPE_ID_LIST"]
-    FSNP = (config["SNPBLOCKS_GENOTYPE"] + 
-           "." + config["SNPBLOCKS_GENOTYPE_ID_LIST"] + ".0")
+    SORTED_SNPS = config["MAPS_SORTED_SNP_LIST_ATTR"]
+    BLOCK_SIZE = config["MAPS_BLOCK_SIZE_ATTR"]
 
-    block = snpblocksc.find_one({
-                                config["SNPBLOCKS_MAP_ATTR"]: mapname,
-                                config["SNPBLOCKS_SAMPLE_ATTR"]: sample,
-                                FSNP: {"$lte": snp_id}},
-                                sort=[(FSNP, -1)])
+    try:
+        pipeline = [{"$match": {"_id": mapname}},
+                    {"$project": {"idx": {"$indexOfArray": ["$" + SORTED_SNPS,
+                                                            snp_id]},
+                                  BLOCK_SIZE: 1}}]
+        map = list(mapc.aggregate(pipeline))[0]
+        blk = map["idx"] // map[BLOCK_SIZE]
+        pos = map["idx"] % map[BLOCK_SIZE]
+    except IndexError:
+        return None
+    except ValueError:
+        return None
+    
+    block = snpblocksc.find_one({config["SNPBLOCKS_MAP_ATTR"]: mapname,
+                                 config["SNPBLOCKS_BLOCK_NUMBER"]: blk,
+                                 config["SNPBLOCKS_SAMPLE_ATTR"]: sample})
     if block is None:
         return None
     try:
-        i = block[GEN][IDS].index(snp_id)
-        res = {key:block[GEN][key][i] for key in block[GEN]} 
+        res = {key:block[GEN][key][pos] for key in block[GEN]} 
     except ValueError:
         return None
     return res
@@ -184,7 +194,10 @@ def import_map(map_reader, map_name,
     map_doc = {"_id": map_name,
               config["MAPS_SIZE_ATTR"]: nsnps,
               config["MAPS_SNP_LIST_ATTR"]: [snp_ids[i][0]
-                                            for i in range(nsnps)]}
+                                            for i in range(nsnps)],
+              config["MAPS_SORTED_SNP_LIST_ATTR"]: sorted([snp_ids[i][0]
+                                                   for i in range(nsnps)]),
+              config["MAPS_BLOCK_SIZE_ATTR"]: config["SNPBLOCKS_SNPS_PER_BLOCK"]}
     map_doc.update(map_reader.map_meta())
     mapc.insert_one(map_doc)
 
@@ -209,9 +222,8 @@ def import_samples(sample_reader, map_name, id_map={}, report=False):
         raise Exception("Map not found.") from None
 
     snps = m[config["MAPS_SNP_LIST_ATTR"]]
-    sorted_snps = sorted(snps)
-    BLOCK_SIZE = config["SNPBLOCKS_SNPS_PER_BLOCK"]
-    GENOTYPE_ID_LIST = config["SNPBLOCKS_GENOTYPE_ID_LIST"]
+    sorted_snps = m[config["MAPS_SORTED_SNP_LIST_ATTR"]]
+    block_size = m[config["MAPS_BLOCK_SIZE_ATTR"]]
 
     new_samples = 0
     new_blocks = 0
@@ -240,19 +252,19 @@ def import_samples(sample_reader, map_name, id_map={}, report=False):
             # TODO: optimize space by storing a space separated string instead of a list.
             # This will require modifying find_snps_of_sample.
 
-        # Add sorted list of snp ids.
-        genotype[GENOTYPE_ID_LIST] = sorted_snps
-       
         # Break genotype into blocks and insert into SNP blocks collection.
-        for i in range(0, len(snps), BLOCK_SIZE):
+        current_block = 0
+        for i in range(0, len(snps), block_size):
             b_genotype = {}
             for key in genotype:
-                b_genotype[key] = genotype[key][i:i+BLOCK_SIZE]
+                b_genotype[key] = genotype[key][i:i+block_size]
             snpblocksc.insert_one({
                 config["SNPBLOCKS_MAP_ATTR"]: map_name,
                 config["SNPBLOCKS_SAMPLE_ATTR"]: id,
+                config["SNPBLOCKS_BLOCK_NUMBER"]: current_block,
                 config["SNPBLOCKS_GENOTYPE"]: b_genotype})
             new_blocks += 1
+            current_block += 1
 
         # Try to associate the sample with an individual, possibly
         # interacting with the user.
