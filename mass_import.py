@@ -28,7 +28,6 @@ def mass_import(directory, maps_only=False, **kwargs):
             exts[name] = {ext}
         else:
             exts[name].add(ext)
-    print(exts) 
     for name in exts:
         imap = exts[name].intersection(_MAP_EXTS)
         iped = exts[name].intersection(_PED_EXTS)
@@ -67,12 +66,12 @@ def mass_import(directory, maps_only=False, **kwargs):
         if not maps_only:
             idfilename = None
             if idsfileext is not None:
-                idfilename = name + idsfileext
+                idfilename = os.path.join(directory, name + idsfileext)
             t_p = _stopwatch(import_samples.import_samples,
                             os.path.join(directory, name + pedfileext),
                             fmt,
                             name,
-                            idfilename=os.path.join(directory, idfilename),
+                            idfilename=idfilename,
                             report=True)
         else:
             t_p = 0.0            
