@@ -198,7 +198,7 @@ def get_sample_data(id, map):
 
 def insert_file(file, individual_id=None):
     if individual_id is None:
-        gfs.put(file, filename=filename)
+        gfs.put(file, filename=os.path.basename(file.name))
     else:
         gfs.put(file, filename=os.path.basename(file.name),
         **{config["FILES_INDIVIDUAL_ATTR"]: individual_id})
@@ -356,6 +356,13 @@ def import_samples(sample_reader, map_name, id_map={}, report=False):
 
 def get_db_stats(scale=1):
     return db.command("dbstats", scale=scale)
+
+
+
+
+def create_individuals(individuals):
+    indc.insert_many(individuals)
+
 
 
 
