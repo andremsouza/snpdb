@@ -3,6 +3,8 @@ import import_samples
 import os
 import time
 import snpdb
+import random
+
 
 def _stopwatch(f, *args, **kwargs):
     start = time.time()
@@ -19,6 +21,10 @@ _EXT_FORMAT = {".0125map": import_map.Z125,
 _MAP_EXTS = {".0125map", ".plmap"}
 _PED_EXTS = {".0125ped", ".plped", ".vcf", ".fr"}
 _IDS_EXTS = {".ids"}
+
+
+
+
 
 def mass_import(directory, maps_only=False, **kwargs):
     exts = {}
@@ -51,7 +57,8 @@ def mass_import(directory, maps_only=False, **kwargs):
         if mapfileext is None:
             mapfileext = pedfileext
         
-        if _EXT_FORMAT[mapfileext] != _EXT_FORMAT[pedfileext]:
+        if (mapfileext is not None and pedfileext is not None and
+            _EXT_FORMAT[mapfileext] != _EXT_FORMAT[pedfileext]):
             raise Exception("Incompatible map and ped files.")
 
         fmt = _EXT_FORMAT[mapfileext]
@@ -63,7 +70,7 @@ def mass_import(directory, maps_only=False, **kwargs):
                          report=True,
                          **kwargs)
         
-        if not maps_only:
+        if not maps_only and pedfileext is not None:
             idfilename = None
             if idsfileext is not None:
                 idfilename = os.path.join(directory, name + idsfileext)
@@ -82,3 +89,32 @@ def mass_import(directory, maps_only=False, **kwargs):
         print(f"{name}: "+
               f"map: {t_m:.3f} s, ped: {t_p:.3f} s, " +
               f"db size (raw): {data:.1f} MiB, compressed: {storage:.1f} MiB")
+    
+
+
+
+def create_individuals(n):
+    inds = [{"_id": f"A{str(i+1)}"} for i in range(n)]
+    snpdb.create_individuals(inds)
+
+
+
+
+def import_media_randomly(directory):
+    ids = [ind["_id"] for ind in snpdb.find_individuals()]
+    total_t =  0.
+    for filename in os.listdir(directory):
+        id = random.choice(ids)
+        f = open(os.path.join(directory, filename), "rb")
+        t = _stopwatch(snpdb.insert_file, f, id)
+        total_t += t
+        f.close()
+        print(f"Added file {filename} to individual {id} in {t:.3f} s.")
+    
+    time.sleep(61)
+    stats = snpdb.get_db_stats(2 ** 20)
+    data = stats["dataSize"]
+    storage = stats["storageSize"]
+
+    print(f"Total time: {total_t:.3f} s, " +
+           f"storage: {data:.1f} MiB(raw), {storage:.1f} MiB (compressed)")
