@@ -390,15 +390,12 @@ def __adjust_snp(snp, map_reader, id=None):
 
 def __find_similar_snps(snp):
     query = {}
-    for attr in [config["SNPS_NAME_ATTR"],
-                 config["SNPS_CHROMOSOME_ATTR"],
+    for attr in [config["SNPS_CHROMOSOME_ATTR"],
                  config["SNPS_POSITION_ATTR"]]:
-        if attr in snp:
-            query[attr] = snp[attr]
-    matches = []
-    for result in snpc.find(query):
-        matches.append(result)
-    return matches
+        if attr not in snp:
+            return []
+        query[attr] = snp[attr]
+    return list(snpc.find(query))
 
 
 
