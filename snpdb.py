@@ -47,6 +47,22 @@ class SampleReader(ABC):
 
 
 
+class MapWriter(ABC):
+    SNP_NAME = MapReader.SNP_NAME
+    SNP_CHROM = MapReader.SNP_CHROM
+    SNP_POS = MapReader.SNP_POS
+    
+    
+    def __init__(self, snps):
+        self._snps = snps
+
+
+    @abstractmethod
+    def write(self, out_file_path):
+        pass
+
+
+
 
 def read_config(path="config.js"):
     s = ""
@@ -420,6 +436,24 @@ def import_samples(sample_reader, map_name, id_map={}, report=False):
 
 
 
+def export_map(id, map_writer, out_file_path):
+    snps, _ = get_map_snps(id)
+    if len(snps) == 0:
+        raise Exception("Map not found.")
+    where = dict()
+    for i in range(len(snps)):
+        where[snps[i]] = i
+    wsnps = [None] * len(snps)
+    for snp in _SNPS.find({_config["SNPS_MAPS_ATTR"]:id}):
+        wsnps[where[snp["_id"]]] = snp
+    for snp in wsnps:
+        __rev_adjust_snp(snp, map_writer)
+    writer = map_writer(wsnps)
+    writer.write(out_file_path)
+
+
+
+
 def get_db_stats(scale=1):
     return _db.command("dbstats", scale=scale)
 
@@ -450,6 +484,18 @@ def __adjust_snp(snp, map_reader, id=None):
     if map_reader.SNP_POS in snp:
         snp[_config["SNPS_POSITION_ATTR"]] = snp.pop(map_reader.SNP_POS)
     return snp
+
+
+
+
+def __rev_adjust_snp(snp, map_writer):
+    snp.pop("_id")
+    if _config["SNPS_NAME_ATTR"] in snp:
+        snp[map_writer.SNP_NAME] = snp.pop(_config["SNPS_NAME_ATTR"])
+    if _config["SNPS_CHROMOSOME_ATTR"] in snp:
+        snp[map_writer.SNP_CHROM] = snp.pop(_config["SNPS_CHROMOSOME_ATTR"])
+    if _config["SNPS_POSITION_ATTR"] in snp:
+        snp[map_writer.SNP_POS] = snp.pop(_config["SNPS_POSITION_ATTR"])
 
 
 
