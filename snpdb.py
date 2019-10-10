@@ -30,6 +30,7 @@ indc = db[config["INDIVIDUALS_COLL"]]
 snpblocksc = db[config["SNPBLOCKS_COLL"]]
 countersc = db[config["COUNTERS_COLL"]]
 samplesc = db[config["SAMPLES_COLL"]]
+mapsnpsc = db[config["MAPSNPS_COLL"]]
 gfs = GridFS(db)
 
 
@@ -61,8 +62,8 @@ def find_snp(id=None, min_chrom=None, max_chrom=None,
 
 
 
-def find_maps(id=None, min_size=None, max_size=None, format=None,
-              include_snps=False):
+def find_maps(id=None, min_size=None, max_size=None, format=None):
+
     query = {}
     size_query = {}
     if id is not None:
@@ -76,15 +77,16 @@ def find_maps(id=None, min_size=None, max_size=None, format=None,
     if len(size_query) > 0:
         query.update({config["MAPS_SIZE_ATTR"]: size_query})
 
-    if include_snps:
-        cursor = mapc.find(query)
-    else:
-        cursor = mapc.find(query,
-            {config["MAPS_SNP_LIST_ATTR"]: 0, 
-             config["MAPS_SORTED_SNP_LIST_ATTR"]: 0})
-    return list(cursor)
+    return list(mapc.find(query))
 
-
+def get_map_snps(id):
+    cur = mapsnpsc.find({config["MAPSNPS_MAP_ATTR"]:id},
+                        sort=[(config["MAPSNPS_IDX_ATTR"], 1)])
+    snps, ssnps = [], []
+    for doc in cur:
+        snps.extend(doc[config["MAPSNPS_LIST_ATTR"]])
+        ssnps.extend(doc[config["MAPSNPS_SORTED_LIST_ATTR"]])
+    return snps, ssnps
 
 
 def find_individuals(id=None, tatoo=None, sample=None):
@@ -102,19 +104,24 @@ def find_individuals(id=None, tatoo=None, sample=None):
 
 def find_snp_of_sample(mapname, sample, snp_id):
     GEN = config["SNPBLOCKS_GENOTYPE"]
-    SORTED_SNPS = config["MAPS_SORTED_SNP_LIST_ATTR"]
     BLOCK_SIZE = config["MAPS_BLOCK_SIZE_ATTR"]
-
+    SORTED_SNPS = config["MAPSNPS_SORTED_LIST_ATTR"]
+    IDX = config["MAPSNPS_IDX_ATTR"]
+    MAX_LIST_SIZE = config["MAPSNPS_MAX_LIST_SIZE"]
+    MAP = config["MAPSNPS_MAP_ATTR"]
     try:
-        pipeline = [{"$match": {"_id": mapname}},
+        map = find_maps(id=mapname)[0]
+        pipeline = [{"$match": {MAP: mapname}},
                     {"$project": {"idx": {"$indexOfArray": ["$" + SORTED_SNPS,
                                                             snp_id]},
-                                  BLOCK_SIZE: 1}}]
-        map = list(mapc.aggregate(pipeline))[0]
-        if map["idx"] == -1:
-            return None
-        blk = map["idx"] // map[BLOCK_SIZE]
-        pos = map["idx"] % map[BLOCK_SIZE]
+                                  IDX: 1}}]
+        for part in mapsnpsc.aggregate(pipeline):
+            if part["idx"] != -1:
+                index = (part["idx"] + part[IDX] * MAX_LIST_SIZE)
+                blk = index // map[BLOCK_SIZE]
+                pos = index % map[BLOCK_SIZE]
+                break
+         
     except IndexError:
         return None
     except ValueError:
@@ -155,12 +162,13 @@ def get_sample_data(id, map):
         return None
     sample = samples[0]
 
-    maps = find_maps(id=map, include_snps=True)
+    maps = find_maps(id=map)
     if len(maps) == 0:
         raise Exception("Sample map data is missing.")
     if len(maps) > 1:
         raise Exception("Homonymous maps with the same ID.")
     m = maps[0]
+    snps, sorted_snps = get_map_snps(map)
 
     SNPBLOCKS_MAP = config["SNPBLOCKS_MAP_ATTR"]
     SNPBLOCKS_SAMPLE = config["SNPBLOCKS_SAMPLE_ATTR"]
@@ -181,10 +189,10 @@ def get_sample_data(id, map):
             genotype[key].extend(data)
     
     where = {}
-    for i, snp_id in enumerate(m[config["MAPS_SNP_LIST_ATTR"]]):
+    for i, snp_id in enumerate(snps):
         where[snp_id] = i
 
-    perm = [where[snp_id] for snp_id in m[config["MAPS_SORTED_SNP_LIST_ATTR"]]]
+    perm = [where[snp_id] for snp_id in sorted_snps]
 
     for key in genotype:
         if len(genotype[key]) != m[config["MAPS_SIZE_ATTR"]]:
@@ -247,18 +255,27 @@ def import_map(map_reader, map_name,
     # Insert new map into maps collection.
     map_doc = {"_id": map_name,
               config["MAPS_SIZE_ATTR"]: nsnps,
-              config["MAPS_SNP_LIST_ATTR"]: [snp_ids[i][0]
-                                            for i in range(nsnps)],
-              config["MAPS_SORTED_SNP_LIST_ATTR"]: sorted([snp_ids[i][0]
-                                                   for i in range(nsnps)]),
               config["MAPS_BLOCK_SIZE_ATTR"]: config["SNPBLOCKS_SNPS_PER_BLOCK"]}
     map_doc.update(map_reader.map_meta())
     mapc.insert_one(map_doc)
 
+    # Insert map snp list (both original order and sorted by id)
+    # into map snps collection.
+    BS = config["MAPSNPS_MAX_LIST_SIZE"]
+    snp_list = [x[0] for x in snp_ids]
+    s_snp_list = sorted(snp_list)
+    mapsnpsc.insert_many((
+        {config["MAPSNPS_MAP_ATTR"]:map_name,
+         config["MAPSNPS_IDX_ATTR"]:i,
+         config["MAPSNPS_LIST_ATTR"]: snp_list[i*BS:i*BS+BS],
+         config["MAPSNPS_SORTED_LIST_ATTR"]: s_snp_list[i*BS:i*BS+BS]}
+         for i in range(0, (nsnps-1)//BS + 1)))
+    
     # Insert new SNPs into snps collection.
-    result = snpc.insert_many(
-        (__adjust_snp(snp, map_reader, snp_ids[i][0])
-        for (i, snp) in enumerate(map_reader) if snp_ids[i][1]))
+    new_snps = [__adjust_snp(snp, map_reader, snp_ids[i][0])
+               for (i, snp) in enumerate(map_reader) if snp_ids[i][1]]
+    if len(new_snps) > 0:
+        snpc.insert_many(new_snps)
 
     # For each SNP (old or new), add the new map to the SNP's map list.
     snpc.bulk_write([UpdateOne({"_id": snp_ids[j][0]},
@@ -266,17 +283,16 @@ def import_map(map_reader, map_name,
     
     if report:
         print(f"Added map {map_name} with {nsnps} SNPs, " +
-              f"{len(result.inserted_ids)} new SNPs created.")
+              f"{len(new_snps)} new SNPs created.")
 
 
 def import_samples(sample_reader, map_name, id_map={}, report=False):
     try:
-        m = find_maps(id=map_name, include_snps=True)[0]
+        m = find_maps(id=map_name)[0]
     except IndexError:
         raise Exception("Map not found.") from None
 
-    snps = m[config["MAPS_SNP_LIST_ATTR"]]
-    sorted_snps = m[config["MAPS_SORTED_SNP_LIST_ATTR"]]
+    snps, sorted_snps = get_map_snps(map_name)
     bsize = m[config["MAPS_BLOCK_SIZE_ATTR"]]
 
     new_samples = 0

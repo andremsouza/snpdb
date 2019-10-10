@@ -27,7 +27,9 @@ db[config.INDIVIDUALS_COLL].createIndex(keyValueObject(config.INDIVIDUALS_ID_LIS
 db[config.INDIVIDUALS_COLL].createIndex(keyValueObject(config.INDIVIDUALS_SAMPLE_LIST_ATTR, 1));
 
 db.createCollection(config.MAPS_COLL);
-db[config.MAPS_COLL].createIndex(keyValueObject(config.MAPS_SNP_LIST_ATTR, 1));
+
+db.createCollection(config.MAPSNPS_COLL);
+db[config.MAPSNPS_COLL].createIndex(keyValueObject(config.MAPSNPS_MAP_ATTR, 1, config.MAPSNPS_IDX_ATTR, 1), unique=true)
 
 db.createCollection(config.SAMPLES_COLL)
 db[config.SAMPLES_COLL].createIndex(keyValueObject(config.SAMPLES_MAP_ATTR, 1, config.SAMPLES_ID_ATTR, 1), unique=true)

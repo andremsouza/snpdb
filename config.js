@@ -13,11 +13,16 @@ const config = {
 	"INDIVIDUALS_SAMPLE_LIST_ATTR": "samples",
 
 	"MAPS_COLL": "maps",
-	"MAPS_SNP_LIST_ATTR": "snps",
-    "MAPS_SORTED_SNP_LIST_ATTR": "ssnps",
-    "MAPS_BLOCK_SIZE_ATTR": "block",
+	"MAPS_BLOCK_SIZE_ATTR": "block",
 	"MAPS_FORMAT_ATTR": "format",
 	"MAPS_SIZE_ATTR": "size",
+
+	"MAPSNPS_COLL": "mapsnps",
+	"MAPSNPS_MAP_ATTR": "map",
+	"MAPSNPS_IDX_ATTR": "i",
+	"MAPSNPS_LIST_ATTR": "snps",
+	"MAPSNPS_SORTED_LIST_ATTR": "ssnps",
+	"MAPSNPS_MAX_LIST_SIZE": 100000,
 
 	"SAMPLES_COLL": "samples",
 	"SAMPLES_MAP_ATTR": "map",
@@ -25,9 +30,9 @@ const config = {
 
 	"SNPBLOCKS_COLL": "snpblocks",
 	"SNPBLOCKS_MAP_ATTR": "m",
-    "SNPBLOCKS_BLOCK_NUMBER": "no",
+	"SNPBLOCKS_BLOCK_NUMBER": "no",
 	"SNPBLOCKS_SAMPLE_ATTR": "s",
-    "SNPBLOCKS_GENOTYPE": "g",
+	"SNPBLOCKS_GENOTYPE": "g",
 	"SNPBLOCKS_SNPS_PER_BLOCK": 10000,
 
 	"COUNTERS_COLL": "counters",
