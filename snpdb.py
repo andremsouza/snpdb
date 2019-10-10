@@ -64,6 +64,22 @@ class MapWriter(ABC):
 
 
 
+class SampleWriter(ABC):
+    SAMPLE_ID = SampleReader.SAMPLE_ID
+    SAMPLE_GENOTYPE = SampleReader.SAMPLE_GENOTYPE
+
+
+    def __init__(self, samples):
+        self._samples = samples
+
+
+    @abstractmethod
+    def write(self, out_file_path):
+        pass
+
+
+
+
 def read_config(path="config.js"):
     s = ""
     with open(path, "r") as f:
@@ -449,6 +465,21 @@ def export_map(id, map_writer, out_file_path):
     for snp in wsnps:
         __rev_adjust_snp(snp, map_writer)
     writer = map_writer(wsnps)
+    writer.write(out_file_path)
+
+
+
+
+def export_samples(samples, map, sample_writer, out_file_path):
+    wsamples = []
+    for id in samples:
+        current = {sample_writer.SAMPLE_ID: id,
+                   sample_writer.SAMPLE_GENOTYPE: get_sample_data(id, map)}
+        sample_info = find_sample(id, map)[0]
+        sample_info.pop("_id")
+        current.update(sample_info)
+        wsamples.append(current)
+    writer = sample_writer(wsamples)
     writer.write(out_file_path)
 
 
