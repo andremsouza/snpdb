@@ -4,13 +4,18 @@ import os
 import time
 import snpdb
 import random
-
+import importlib
 
 def _stopwatch(f, *args, **kwargs):
     start = time.time()
     f(*args, **kwargs)
     return time.time() - start
+ 
 
+def _reset_db():
+    os.system("mongo mongo_setup.js > /dev/null")
+
+    
 _EXT_FORMAT = {".0125map": import_map.Z125,
                ".0125ped": import_map.Z125,
                ".plmap": import_map.PLINK,
@@ -23,17 +28,16 @@ _PED_EXTS = {".0125ped", ".plped", ".vcf", ".fr"}
 _IDS_EXTS = {".ids"}
 
 
-
-
-
 def mass_import(directory, maps_only=False, **kwargs):
     exts = {}
-    for filename in os.listdir(directory):
-        name, ext = os.path.splitext(filename)
-        if name not in exts:
-            exts[name] = {ext}
-        else:
-            exts[name].add(ext)
+    for root, subdirs, files in os.walk(directory):
+        for filename in files:
+            name, ext = os.path.splitext(filename)
+            name = os.path.join(root, name)
+            if name not in exts:
+                exts[name] = {ext}
+            else:
+                exts[name].add(ext)
     for name in exts:
         imap = exts[name].intersection(_MAP_EXTS)
         iped = exts[name].intersection(_PED_EXTS)
@@ -62,6 +66,12 @@ def mass_import(directory, maps_only=False, **kwargs):
             raise Exception("Incompatible map and ped files.")
 
         fmt = _EXT_FORMAT[mapfileext]
+        
+        print("-" * 100)
+        _reset_db()
+        importlib.reload(snpdb)
+        importlib.reload(import_map)
+        importlib.reload(import_samples)
 
         t_m = _stopwatch(import_map.import_map,
                          os.path.join(directory, name + mapfileext),

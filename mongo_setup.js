@@ -15,7 +15,8 @@ function keyValueObject(key1, value1, ...args)
 }
 
 
-let db = connect(config.HOST + "/" + config.DB_NAME);
+db = connect(config.HOST + "/" + config.DB_NAME);
+db.dropDatabase()
 
 db.createCollection(config.SNPS_COLL);
 db[config.SNPS_COLL].createIndex(keyValueObject(config.SNPS_NAME_ATTR, 1));

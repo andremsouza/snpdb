@@ -1,4 +1,4 @@
-const config = {
+config = {
 	"HOST": "localhost",
 	"DB_NAME": "snpdb",
 
