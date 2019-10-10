@@ -1,9 +1,51 @@
-#!/usr/bin/python3
-
+from abc import ABC, abstractmethod
 from pymongo import MongoClient, UpdateOne
 from gridfs import GridFS
 import json
 import os
+
+
+class MapReader(ABC): 
+    SNP_NAME = "name"
+    SNP_CHROM = "chr"
+    SNP_POS = "pos"
+    MAP_FORMAT = "format"
+
+    def __init__(self, map_file_path):
+        self._MAP_FILE = map_file_path
+
+    @abstractmethod
+    def __iter__(self):
+        pass
+
+    @abstractmethod
+    def __len__(self):
+        pass
+
+    @abstractmethod
+    def map_meta(self):
+        pass
+
+
+
+
+class SampleReader(ABC):
+    SAMPLE_ID = "sample"
+    SAMPLE_GENOTYPE = "genotype"
+
+    def __init__(self, ped_file_path):
+        self._PED_FILE = ped_file_path
+
+    @abstractmethod
+    def __iter__(self):
+        pass
+
+    @abstractmethod
+    def __len__(self):
+        pass
+
+
+
 
 
 def read_config(path="config.js"):
@@ -21,24 +63,24 @@ def read_config(path="config.js"):
     return json.loads(s)
 
 
-config = read_config()
-client = MongoClient(config["HOST"], w=1)
-db = client[config["DB_NAME"]]
-snpc = db[config["SNPS_COLL"]]
-mapc = db[config["MAPS_COLL"]]
-indc = db[config["INDIVIDUALS_COLL"]]
-snpblocksc = db[config["SNPBLOCKS_COLL"]]
-countersc = db[config["COUNTERS_COLL"]]
-samplesc = db[config["SAMPLES_COLL"]]
-mapsnpsc = db[config["MAPSNPS_COLL"]]
-gfs = GridFS(db)
+_config = read_config()
+_client = MongoClient(_config["HOST"], w=1)
+_db = _client[_config["DB_NAME"]]
+_SNPS = _db[_config["SNPS_COLL"]]
+_MAPS = _db[_config["MAPS_COLL"]]
+_INDS = _db[_config["INDIVIDUALS_COLL"]]
+_SNPBLOCKS = _db[_config["SNPBLOCKS_COLL"]]
+_COUNTERS = _db[_config["COUNTERS_COLL"]]
+_SAMPLES = _db[_config["SAMPLES_COLL"]]
+_MAPSNPS = _db[_config["MAPSNPS_COLL"]]
+_GFS = GridFS(_db)
 
 
 def find_snp(id=None, min_chrom=None, max_chrom=None,
              min_pos=None, max_pos=None):
-    chrom = config["SNPS_CHROMOSOME_ATTR"]
-    pos = config["SNPS_POSITION_ATTR"]
-    name = config["SNPS_NAME_ATTR"]
+    chrom = _config["SNPS_CHROMOSOME_ATTR"]
+    pos = _config["SNPS_POSITION_ATTR"]
+    name = _config["SNPS_NAME_ATTR"]
     query, chrom_query, pos_query = {}, {}, {}
     
     if min_chrom is not None:
@@ -57,7 +99,7 @@ def find_snp(id=None, min_chrom=None, max_chrom=None,
     if len(pos_query) > 0:
         query.update({pos: pos_query})
     
-    return list(snpc.find(query))
+    return list(_SNPS.find(query))
 
 
 
@@ -69,24 +111,30 @@ def find_maps(id=None, min_size=None, max_size=None, format=None):
     if id is not None:
         query.update({"_id": id})
     if format is not None:
-        query.update({config["MAPS_FORMAT_ATTR"]: format})
+        query.update({_config["MAPS_FORMAT_ATTR"]: format})
     if min_size is not None:
         size_query.update({"$gte": min_size})
     if max_size is not None:
         size_query.update({"$lte": max_size})
     if len(size_query) > 0:
-        query.update({config["MAPS_SIZE_ATTR"]: size_query})
+        query.update({_config["MAPS_SIZE_ATTR"]: size_query})
 
-    return list(mapc.find(query))
+    return list(_MAPS.find(query))
+
+
+
+
 
 def get_map_snps(id):
-    cur = mapsnpsc.find({config["MAPSNPS_MAP_ATTR"]:id},
-                        sort=[(config["MAPSNPS_IDX_ATTR"], 1)])
+    cur = _MAPSNPS.find({_config["MAPSNPS_MAP_ATTR"]:id},
+                        sort=[(_config["MAPSNPS_IDX_ATTR"], 1)])
     snps, ssnps = [], []
     for doc in cur:
-        snps.extend(doc[config["MAPSNPS_LIST_ATTR"]])
-        ssnps.extend(doc[config["MAPSNPS_SORTED_LIST_ATTR"]])
+        snps.extend(doc[_config["MAPSNPS_LIST_ATTR"]])
+        ssnps.extend(doc[_config["MAPSNPS_SORTED_LIST_ATTR"]])
     return snps, ssnps
+
+
 
 
 def find_individuals(id=None, tatoo=None, sample=None):
@@ -94,28 +142,28 @@ def find_individuals(id=None, tatoo=None, sample=None):
     if id is not None:
         query.update({"_id": id})
     if tatoo is not None:
-        query.update({config["INDIVIDUALS_ID_LIST_ATTR"]: tatoo})
+        query.update({_config["INDIVIDUALS_ID_LIST_ATTR"]: tatoo})
     if sample is not None:
-        query.update({config["INDIVIDUALS_SAMPLE_LIST_ATTR"]: sample})
-    return list(indc.find(query))
+        query.update({_config["INDIVIDUALS_SAMPLE_LIST_ATTR"]: sample})
+    return list(_INDS.find(query))
 
 
 
 
 def find_snp_of_sample(mapname, sample, snp_id):
-    GEN = config["SNPBLOCKS_GENOTYPE"]
-    BLOCK_SIZE = config["MAPS_BLOCK_SIZE_ATTR"]
-    SORTED_SNPS = config["MAPSNPS_SORTED_LIST_ATTR"]
-    IDX = config["MAPSNPS_IDX_ATTR"]
-    MAX_LIST_SIZE = config["MAPSNPS_MAX_LIST_SIZE"]
-    MAP = config["MAPSNPS_MAP_ATTR"]
+    GEN = _config["SNPBLOCKS_GENOTYPE"]
+    BLOCK_SIZE = _config["MAPS_BLOCK_SIZE_ATTR"]
+    SORTED_SNPS = _config["MAPSNPS_SORTED_LIST_ATTR"]
+    IDX = _config["MAPSNPS_IDX_ATTR"]
+    MAX_LIST_SIZE = _config["MAPSNPS_MAX_LIST_SIZE"]
+    MAP = _config["MAPSNPS_MAP_ATTR"]
     try:
         map = find_maps(id=mapname)[0]
         pipeline = [{"$match": {MAP: mapname}},
                     {"$project": {"idx": {"$indexOfArray": ["$" + SORTED_SNPS,
                                                             snp_id]},
                                   IDX: 1}}]
-        for part in mapsnpsc.aggregate(pipeline):
+        for part in _MAPSNPS.aggregate(pipeline):
             if part["idx"] != -1:
                 index = (part["idx"] + part[IDX] * MAX_LIST_SIZE)
                 blk = index // map[BLOCK_SIZE]
@@ -127,9 +175,9 @@ def find_snp_of_sample(mapname, sample, snp_id):
     except ValueError:
         return None
     
-    block = snpblocksc.find_one({config["SNPBLOCKS_MAP_ATTR"]: mapname,
-                                 config["SNPBLOCKS_BLOCK_NUMBER"]: blk,
-                                 config["SNPBLOCKS_SAMPLE_ATTR"]: sample})
+    block = _SNPBLOCKS.find_one({_config["SNPBLOCKS_MAP_ATTR"]: mapname,
+                                 _config["SNPBLOCKS_BLOCK_NUMBER"]: blk,
+                                 _config["SNPBLOCKS_SAMPLE_ATTR"]: sample})
     if block is None:
         return None
     res = {}
@@ -146,10 +194,10 @@ def find_snp_of_sample(mapname, sample, snp_id):
 def find_sample(id=None, map=None):
     query = {}
     if id is not None:
-        query[config["SAMPLES_ID_ATTR"]] = id
+        query[_config["SAMPLES_ID_ATTR"]] = id
     if map is not None:
-        query[config["SAMPLES_MAP_ATTR"]] = map
-    return list(samplesc.find(query))
+        query[_config["SAMPLES_MAP_ATTR"]] = map
+    return list(_SAMPLES.find(query))
 
 
 
@@ -170,15 +218,15 @@ def get_sample_data(id, map):
     m = maps[0]
     snps, sorted_snps = get_map_snps(map)
 
-    SNPBLOCKS_MAP = config["SNPBLOCKS_MAP_ATTR"]
-    SNPBLOCKS_SAMPLE = config["SNPBLOCKS_SAMPLE_ATTR"]
-    SNPBLOCKS_NO = config["SNPBLOCKS_BLOCK_NUMBER"]
-    blocks = snpblocksc.find({SNPBLOCKS_MAP: map,
+    SNPBLOCKS_MAP = _config["SNPBLOCKS_MAP_ATTR"]
+    SNPBLOCKS_SAMPLE = _config["SNPBLOCKS_SAMPLE_ATTR"]
+    SNPBLOCKS_NO = _config["SNPBLOCKS_BLOCK_NUMBER"]
+    blocks = _SNPBLOCKS.find({SNPBLOCKS_MAP: map,
                               SNPBLOCKS_SAMPLE: id},
                               sort=[(SNPBLOCKS_NO, 1)])
     genotype = {}
     for block in blocks:
-        g = block[config["SNPBLOCKS_GENOTYPE"]]
+        g = block[_config["SNPBLOCKS_GENOTYPE"]]
         for key in g:
             if g[key][0] == " ":
                 data = g[key].split()
@@ -195,7 +243,7 @@ def get_sample_data(id, map):
     perm = [where[snp_id] for snp_id in sorted_snps]
 
     for key in genotype:
-        if len(genotype[key]) != m[config["MAPS_SIZE_ATTR"]]:
+        if len(genotype[key]) != m[_config["MAPS_SIZE_ATTR"]]:
             raise Exception("Sample genotype and map size mismatch.")
         genotype[key] = [x for _, x in sorted(zip(perm, genotype[key]))]
     
@@ -206,10 +254,10 @@ def get_sample_data(id, map):
 
 def insert_file(file, individual_id=None):
     if individual_id is None:
-        gfs.put(file, filename=os.path.basename(file.name))
+        _GFS.put(file, filename=os.path.basename(file.name))
     else:
-        gfs.put(file, filename=os.path.basename(file.name),
-        **{config["FILES_INDIVIDUAL_ATTR"]: individual_id})
+        _GFS.put(file, filename=os.path.basename(file.name),
+        **{_config["FILES_INDIVIDUAL_ATTR"]: individual_id})
 
 
 
@@ -218,9 +266,9 @@ def list_files(individual_id=None):
     res = []
     cur = None
     if individual_id is None:
-        cur = db.fs.files.find({})
+        cur = _db.fs.files.find({})
     else:
-        cur = db.fs.files.find({config["FILES_INDIVIDUAL_ATTR"]: individual_id})
+        cur = _db.fs.files.find({_config["FILES_INDIVIDUAL_ATTR"]: individual_id})
     return list(cur)
 
 
@@ -228,7 +276,7 @@ def list_files(individual_id=None):
 
 def get_files(files):
     for file_doc in files:
-        grid_out = gfs.get(file_doc["_id"])
+        grid_out = _GFS.get(file_doc["_id"])
         filename = grid_out.filename
         with open(filename, "wb+") as f:
             f.write(grid_out.read())
@@ -254,36 +302,38 @@ def import_map(map_reader, map_name,
 
     # Insert new map into maps collection.
     map_doc = {"_id": map_name,
-              config["MAPS_SIZE_ATTR"]: nsnps,
-              config["MAPS_BLOCK_SIZE_ATTR"]: config["SNPBLOCKS_SNPS_PER_BLOCK"]}
+              _config["MAPS_SIZE_ATTR"]: nsnps,
+              _config["MAPS_BLOCK_SIZE_ATTR"]: _config["SNPBLOCKS_SNPS_PER_BLOCK"]}
     map_doc.update(map_reader.map_meta())
-    mapc.insert_one(map_doc)
+    _MAPS.insert_one(map_doc)
 
     # Insert map snp list (both original order and sorted by id)
     # into map snps collection.
-    BS = config["MAPSNPS_MAX_LIST_SIZE"]
+    BS = _config["MAPSNPS_MAX_LIST_SIZE"]
     snp_list = [x[0] for x in snp_ids]
     s_snp_list = sorted(snp_list)
-    mapsnpsc.insert_many((
-        {config["MAPSNPS_MAP_ATTR"]:map_name,
-         config["MAPSNPS_IDX_ATTR"]:i,
-         config["MAPSNPS_LIST_ATTR"]: snp_list[i*BS:i*BS+BS],
-         config["MAPSNPS_SORTED_LIST_ATTR"]: s_snp_list[i*BS:i*BS+BS]}
+    _MAPSNPS.insert_many((
+        {_config["MAPSNPS_MAP_ATTR"]:map_name,
+         _config["MAPSNPS_IDX_ATTR"]:i,
+         _config["MAPSNPS_LIST_ATTR"]: snp_list[i*BS:i*BS+BS],
+         _config["MAPSNPS_SORTED_LIST_ATTR"]: s_snp_list[i*BS:i*BS+BS]}
          for i in range(0, (nsnps-1)//BS + 1)))
     
     # Insert new SNPs into snps collection.
     new_snps = [__adjust_snp(snp, map_reader, snp_ids[i][0])
                for (i, snp) in enumerate(map_reader) if snp_ids[i][1]]
     if len(new_snps) > 0:
-        snpc.insert_many(new_snps)
+        _SNPS.insert_many(new_snps)
 
     # For each SNP (old or new), add the new map to the SNP's map list.
-    snpc.bulk_write([UpdateOne({"_id": snp_ids[j][0]},
-        {"$push": {config["SNPS_MAPS_ATTR"]: map_name}}) for j in range(nsnps)])
+    _SNPS.bulk_write([UpdateOne({"_id": snp_ids[j][0]},
+        {"$push": {_config["SNPS_MAPS_ATTR"]: map_name}}) for j in range(nsnps)])
     
     if report:
         print(f"Added map {map_name} with {nsnps} SNPs, " +
               f"{len(new_snps)} new SNPs created.")
+
+
 
 
 def import_samples(sample_reader, map_name, id_map={}, report=False):
@@ -293,7 +343,7 @@ def import_samples(sample_reader, map_name, id_map={}, report=False):
         raise Exception("Map not found.") from None
 
     snps, sorted_snps = get_map_snps(map_name)
-    bsize = m[config["MAPS_BLOCK_SIZE_ATTR"]]
+    bsize = m[_config["MAPS_BLOCK_SIZE_ATTR"]]
 
     new_samples = 0
     new_blocks = 0
@@ -309,11 +359,11 @@ def import_samples(sample_reader, map_name, id_map={}, report=False):
                 raise Exception("Sample genotype and map size mismatch.")
 
         # Prepare sample object to be inserted.
-        sample_key = {config["SAMPLES_MAP_ATTR"]: map_name,
-                      config["SAMPLES_ID_ATTR"]: id}
+        sample_key = {_config["SAMPLES_MAP_ATTR"]: map_name,
+                      _config["SAMPLES_ID_ATTR"]: id}
         sample.update(sample_key)
 
-        samplesc.insert_one(sample)
+        _SAMPLES.insert_one(sample)
         new_samples += 1
 
         # Sort genotype lists using snp id as key.
@@ -333,11 +383,11 @@ def import_samples(sample_reader, map_name, id_map={}, report=False):
                     b_genotype[key] = genotype[key][i:i+bsize]
                 else:
                     b_genotype[key] = " " + " ".join(genotype[key][i:i+bsize])
-            snpblocksc.insert_one({
-                config["SNPBLOCKS_MAP_ATTR"]: map_name,
-                config["SNPBLOCKS_SAMPLE_ATTR"]: id,
-                config["SNPBLOCKS_BLOCK_NUMBER"]: current_block,
-                config["SNPBLOCKS_GENOTYPE"]: b_genotype})
+            _SNPBLOCKS.insert_one({
+                _config["SNPBLOCKS_MAP_ATTR"]: map_name,
+                _config["SNPBLOCKS_SAMPLE_ATTR"]: id,
+                _config["SNPBLOCKS_BLOCK_NUMBER"]: current_block,
+                _config["SNPBLOCKS_GENOTYPE"]: b_genotype})
             new_blocks += 1
             current_block += 1
 
@@ -351,15 +401,15 @@ def import_samples(sample_reader, map_name, id_map={}, report=False):
             elif len(individuals) == 1:
                 option = 1
             if option == 0:
-                indc.insert_one({
+                _INDS.insert_one({
                     "_id": __next_individual_id(),
-                     config["INDIVIDUALS_ID_LIST_ATTR"]: [id_map[id]],
-                     config["INDIVIDUALS_SAMPLE_LIST_ATTR"]: [sample_key]})
+                     _config["INDIVIDUALS_ID_LIST_ATTR"]: [id_map[id]],
+                     _config["INDIVIDUALS_SAMPLE_LIST_ATTR"]: [sample_key]})
                 new_individuals += 1
             else:
-                indc.update_one(
+                _INDS.update_one(
                     {"_id": individuals[option-1]["_id"]},
-                    {"$push": {config["INDIVIDUALS_SAMPLE_LIST_ATTR"]: sample_key}})
+                    {"$push": {_config["INDIVIDUALS_SAMPLE_LIST_ATTR"]: sample_key}})
                 old_individuals += 1
         
     if report:
@@ -371,21 +421,21 @@ def import_samples(sample_reader, map_name, id_map={}, report=False):
 
 
 def get_db_stats(scale=1):
-    return db.command("dbstats", scale=scale)
+    return _db.command("dbstats", scale=scale)
 
 
 
 
 def create_individuals(individuals):
-    indc.insert_many(individuals)
+    _INDS.insert_many(individuals)
 
 
 
 
 def __reserve_snp_ids(cnt):
-    doc = countersc.find_one_and_update({"_id": config["SNPS_COLL"]}, 
-        {"$inc": {config["COUNTERS_SEQ_VALUE_ATTR"]: cnt}})
-    return doc[config["COUNTERS_SEQ_VALUE_ATTR"]]
+    doc = _COUNTERS.find_one_and_update({"_id": _config["SNPS_COLL"]}, 
+        {"$inc": {_config["COUNTERS_SEQ_VALUE_ATTR"]: cnt}})
+    return doc[_config["COUNTERS_SEQ_VALUE_ATTR"]]
 
 
 
@@ -394,11 +444,11 @@ def __adjust_snp(snp, map_reader, id=None):
     if id is not None:
         snp["_id"] = id
     if map_reader.SNP_NAME in snp:
-        snp[config["SNPS_NAME_ATTR"]] = snp.pop(map_reader.SNP_NAME)
+        snp[_config["SNPS_NAME_ATTR"]] = snp.pop(map_reader.SNP_NAME)
     if map_reader.SNP_CHROM in snp:
-        snp[config["SNPS_CHROMOSOME_ATTR"]] = snp.pop(map_reader.SNP_CHROM)
+        snp[_config["SNPS_CHROMOSOME_ATTR"]] = snp.pop(map_reader.SNP_CHROM)
     if map_reader.SNP_POS in snp:
-        snp[config["SNPS_POSITION_ATTR"]] = snp.pop(map_reader.SNP_POS)
+        snp[_config["SNPS_POSITION_ATTR"]] = snp.pop(map_reader.SNP_POS)
     return snp
 
 
@@ -406,12 +456,12 @@ def __adjust_snp(snp, map_reader, id=None):
 
 def __find_similar_snps(snp):
     query = {}
-    for attr in [config["SNPS_CHROMOSOME_ATTR"],
-                 config["SNPS_POSITION_ATTR"]]:
+    for attr in [_config["SNPS_CHROMOSOME_ATTR"],
+                 _config["SNPS_POSITION_ATTR"]]:
         if attr not in snp:
             return []
         query[attr] = snp[attr]
-    return list(snpc.find(query))
+    return list(_SNPS.find(query))
 
 
 
@@ -518,8 +568,8 @@ def __user_individual_choice(tatoo, individuals):
 
 
 def __next_individual_id():
-    doc = countersc.find_one_and_update(
-        {"_id": config["INDIVIDUALS_COLL"]},
-        {"$inc": {config["COUNTERS_SEQ_VALUE_ATTR"]: 1}})
-    return doc[config["COUNTERS_SEQ_VALUE_ATTR"]]
+    doc = _COUNTERS.find_one_and_update(
+        {"_id": _config["INDIVIDUALS_COLL"]},
+        {"$inc": {_config["COUNTERS_SEQ_VALUE_ATTR"]: 1}})
+    return doc[_config["COUNTERS_SEQ_VALUE_ATTR"]]
 

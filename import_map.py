@@ -3,17 +3,14 @@ import argparse
 import snpdb
 import time
 
-from Zero125MapReader import Zero125MapReader
-from PlinkMapReader import PlinkMapReader
-from FinalReportMapReader import FinalReportMapReader
-from VcfMapReader import VcfMapReader
+from readers import Z125MapReader, PlinkMapReader, FinalReportMapReader, VcfMapReader
 
 Z125 = 0
 PLINK = 1
 ILMFR = 2
 VCF = 3
 
-READERS = [Zero125MapReader, PlinkMapReader,
+READERS = [Z125MapReader, PlinkMapReader,
           FinalReportMapReader, VcfMapReader]
 
 def import_map(filename, fileformat, mapname, **kwargs):

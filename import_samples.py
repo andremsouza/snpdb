@@ -3,17 +3,14 @@ import argparse
 import snpdb
 import time
 
-from Zero125SampleReader import Zero125SampleReader
-from PlinkSampleReader import PlinkSampleReader
-from FinalReportSampleReader import FinalReportSampleReader
-from VcfSampleReader import VcfSampleReader
+from readers import Z125SampleReader, PlinkSampleReader, FinalReportSampleReader, VcfSampleReader
 
 Z125 = 0
 PLINK = 1
 ILMFR = 2
 VCF = 3
 
-READERS = [Zero125SampleReader, PlinkSampleReader,
+READERS = [Z125SampleReader, PlinkSampleReader,
           FinalReportSampleReader, VcfSampleReader]
 
 def import_samples(filename, fileformat, mapname, idfilename=None, **kwargs):
