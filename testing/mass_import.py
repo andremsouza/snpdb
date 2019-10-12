@@ -1,5 +1,4 @@
-import import_map
-import import_samples
+import cli
 import os
 import time
 import snpdb
@@ -16,12 +15,12 @@ def _reset_db():
     os.system("mongo mongo_setup.js > /dev/null")
 
     
-_EXT_FORMAT = {".0125map": import_map.Z125,
-               ".0125ped": import_map.Z125,
-               ".plmap": import_map.PLINK,
-               ".plped": import_map.PLINK,
-               ".vcf": import_map.VCF,
-               ".fr": import_map.ILMFR}
+_EXT_FORMAT = {".0125map": "0125",
+               ".0125ped": "0125",
+               ".plmap": "pl",
+               ".plped": "pl",
+               ".vcf": "vcf",
+               ".fr": "fr"}
 
 _MAP_EXTS = {".0125map", ".plmap"}
 _PED_EXTS = {".0125ped", ".plped", ".vcf", ".fr"}
@@ -70,10 +69,9 @@ def mass_import(directory, maps_only=False, **kwargs):
         print("-" * 100)
         _reset_db()
         importlib.reload(snpdb)
-        importlib.reload(import_map)
-        importlib.reload(import_samples)
+        importlib.reload(cli)
 
-        t_m = _stopwatch(import_map.import_map,
+        t_m = _stopwatch(cli.import_map,
                          os.path.join(directory, name + mapfileext),
                          fmt,
                          name,
@@ -84,12 +82,12 @@ def mass_import(directory, maps_only=False, **kwargs):
             idfilename = None
             if idsfileext is not None:
                 idfilename = os.path.join(directory, name + idsfileext)
-            t_p = _stopwatch(import_samples.import_samples,
-                            os.path.join(directory, name + pedfileext),
-                            fmt,
-                            name,
-                            idfilename=idfilename,
-                            report=True)
+            t_p = _stopwatch(cli.import_samples,
+                             os.path.join(directory, name + pedfileext),
+                             fmt,
+                             name,
+                             idfilename=idfilename,
+                             report=True)
         else:
             t_p = 0.0            
 
