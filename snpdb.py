@@ -130,7 +130,6 @@ def find_snp(id=None, min_chrom=None, max_chrom=None,
         query.update({chrom: chrom_query})
     if len(pos_query) > 0:
         query.update({pos: pos_query})
-    
     return list(_SNPS.find(query))
 
 
@@ -151,7 +150,9 @@ def find_maps(id=None, min_size=None, max_size=None, format=None):
     if len(size_query) > 0:
         query.update({_config["MAPS_SIZE_ATTR"]: size_query})
 
-    return list(_MAPS.find(query))
+    return list(_MAPS.find(query, {_config["MAPS_FORMAT_ATTR"]: 1, 
+                                   _config["MAPS_SIZE_ATTR"]: 1,
+                                   _config["MAPS_BLOCK_SIZE_ATTR"]: 1}))
 
 
 
@@ -169,14 +170,20 @@ def get_map_snps(id):
 
 
 
-def find_individuals(id=None, tatoo=None, sample=None):
+def find_individuals(id=None, tatoo=None, sample_map=None, sample_id=None):
     query = {}
     if id is not None:
         query.update({"_id": id})
     if tatoo is not None:
         query.update({_config["INDIVIDUALS_ID_LIST_ATTR"]: tatoo})
-    if sample is not None:
-        query.update({_config["INDIVIDUALS_SAMPLE_LIST_ATTR"]: sample})
+    if sample_map is not None:
+        attr = (_config["INDIVIDUALS_SAMPLE_LIST_ATTR"] + "."
+                + _config["SAMPLES_MAP_ATTR"])
+        query.update({attr: sample_map})
+    if sample_id is not None:
+        attr = (_config["INDIVIDUALS_SAMPLE_LIST_ATTR"] + "."
+                + _config["SAMPLES_ID_ATTR"])
+        query.update({attr: sample_id})
     return list(_INDS.find(query))
 
 

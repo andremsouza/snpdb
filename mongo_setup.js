@@ -25,7 +25,8 @@ db[config.SNPS_COLL].createIndex(keyValueObject(config.SNPS_MAPS_ATTR, 1));
 
 db.createCollection(config.INDIVIDUALS_COLL);
 db[config.INDIVIDUALS_COLL].createIndex(keyValueObject(config.INDIVIDUALS_ID_LIST_ATTR, 1));
-db[config.INDIVIDUALS_COLL].createIndex(keyValueObject(config.INDIVIDUALS_SAMPLE_LIST_ATTR, 1));
+db[config.INDIVIDUALS_COLL].createIndex(keyValueObject(config.INDIVIDUALS_SAMPLE_LIST_ATTR + "." + config.SAMPLES_MAP_ATTR, 1));
+db[config.INDIVIDUALS_COLL].createIndex(keyValueObject(config.INDIVIDUALS_SAMPLE_LIST_ATTR + "." + config.SAMPLES_ID_ATTR, 1));
 
 db.createCollection(config.MAPS_COLL);
 
