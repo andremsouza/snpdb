@@ -27,7 +27,7 @@ _PED_EXTS = {".0125ped", ".plped", ".vcf", ".fr"}
 _IDS_EXTS = {".ids"}
 
 
-def mass_import(directory, maps_only=False, **kwargs):
+def mass_import(directory, maps_only=False, clear_before_each=False, **kwargs):
     exts = {}
     for root, subdirs, files in os.walk(directory):
         for filename in files:
@@ -67,9 +67,10 @@ def mass_import(directory, maps_only=False, **kwargs):
         fmt = _EXT_FORMAT[mapfileext]
         
         print("-" * 100)
-        _reset_db()
-        importlib.reload(snpdb)
-        importlib.reload(cli)
+        if clear_before_each:
+            _reset_db()
+            importlib.reload(snpdb)
+            importlib.reload(cli)
 
         t_m = _stopwatch(cli.import_map,
                          os.path.join(directory, name + mapfileext),
