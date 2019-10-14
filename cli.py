@@ -4,12 +4,16 @@ import snpdb
 import time
 
 from readers import *
+from writers import *
 
 _FORMAT_CHOICES = ["0125", "pl", "fr", "vcf"]
 _MAP_READERS = [Z125MapReader, PlinkMapReader,
           FinalReportMapReader, VcfMapReader]
 _SAMPLE_READERS = [Z125SampleReader, PlinkSampleReader,
                   FinalReportSampleReader, VcfSampleReader]
+
+_MAP_WRITERS = [Z125MapWriter, PlinkMapWriter]
+_SAMPLE_WRITERS = [Z125SampleWriter, PlinkSampleWriter]
 
 
 
@@ -30,6 +34,22 @@ def import_samples(filename, fmt, mapname, idfilename=None, **kwargs):
                 id_map[sample] = individual
     reader = _SAMPLE_READERS[_FORMAT_CHOICES.index(fmt)](filename)
     snpdb.import_samples(reader, mapname, id_map=id_map, **kwargs)
+
+
+
+
+def export_map(mapname, fmt, out_file_path):
+   writer = _MAP_WRITERS[_FORMAT_CHOICES.index(fmt)]
+   snpdb.export_map(mapname, writer, out_file_path)
+
+
+
+
+def export_samples(samples, map, fmt, out_file_path):
+    writer = _SAMPLE_WRITERS[_FORMAT_CHOICES.index(fmt)]
+    snpdb.export_samples(samples, map, writer, out_file_path)
+
+
 
 
 if __name__ == "__main__":
@@ -100,6 +120,7 @@ if __name__ == "__main__":
                                      "at most MAX_SIZE",
                    type=int)
     
+
     # find-individuals
     p = subparsers.add_parser("find-individuals",
                              help="search individuals in the database")
@@ -110,7 +131,6 @@ if __name__ == "__main__":
     p.add_argument("--map", help="match only individuals which have a " +
                                  "sample with this specific map")
 
-    
 
     # find-samples
     p = subparsers.add_parser("find-samples",
@@ -141,7 +161,8 @@ if __name__ == "__main__":
     p.add_argument("--individual", help="match only files associated with " +
                                 "individual whose internal id is INDIVIDUAL")
     p.add_argument("--name", help="match file name exactly")
-    
+   
+
     # get-files
     p = subparsers.add_parser("get-files",
                               help="download files from the database")
@@ -150,6 +171,27 @@ if __name__ == "__main__":
     p.add_argument("--name",
                    help="download only files with the specified NAME")
 
+    
+    # export-map
+    p = subparsers.add_parser("export-map",
+                              help="export map from database to file")
+    p.add_argument("format", help="format of the output file",
+                   choices=["0125", "pl"])
+    p.add_argument("map", help="name of the map to export")
+    p.add_argument("outfile", help="path of the file to export to")
+
+    # export-samples
+    p = subparsers.add_parser("export-samples",
+                              help="export samples from database to file")
+    p.add_argument("format", help="format of the output file",
+                   choices=["0125", "pl"])
+    p.add_argument("map", help="name of the map to which the samples belong")
+    p.add_argument("outfile", help="path of the file to export to")
+    p.add_argument("sample", help="ids of the samples to export, if none " +
+                                   "is specified, will export every sample " +
+                                   "within map", nargs="*")
+
+    
 
     args = parser.parse_args()
     if args.subcommand == "import-map":
@@ -193,6 +235,9 @@ if __name__ == "__main__":
             print(file)
     elif args.subcommand == "get-files":
         snpdb.get_files(snpdb.list_files(args.individual, args.name))
-            
+    elif args.subcommand == "export-map":
+        export_map(args.map, args.format, args.outfile) 
+    elif args.subcommand == "export-samples":
+        export_samples(args.sample, args.map, args.format, args.outfile)
     elif args.subcommand is None:
         print("Subcommand required. Use -h for help.")
