@@ -109,10 +109,11 @@ _GFS = GridFS(_db)
 
 
 def find_snp(id=None, min_chrom=None, max_chrom=None,
-             min_pos=None, max_pos=None):
+             min_pos=None, max_pos=None, map=None, iid=None):
     chrom = _config["SNPS_CHROMOSOME_ATTR"]
     pos = _config["SNPS_POSITION_ATTR"]
     name = _config["SNPS_NAME_ATTR"]
+    mp = _config["SNPS_MAPS_ATTR"]
     query, chrom_query, pos_query = {}, {}, {}
     
     if min_chrom is not None:
@@ -123,9 +124,13 @@ def find_snp(id=None, min_chrom=None, max_chrom=None,
         pos_query.update({"$gte": min_pos})
     if max_pos is not None:
         pos_query.update({"$lte": max_pos})
-
+    
     if id is not None:
         query.update({name: id})
+    if map is not None:
+        query.update({mp: map})
+    if iid is not None:
+        query.update({"_id": iid})
     if len(chrom_query) > 0:
         query.update({chrom: chrom_query})
     if len(pos_query) > 0:
@@ -208,15 +213,15 @@ def find_snp_of_sample(mapname, sample, snp_id):
                 blk = index // map[BLOCK_SIZE]
                 pos = index % map[BLOCK_SIZE]
                 break
+
+        block = _SNPBLOCKS.find_one({_config["SNPBLOCKS_MAP_ATTR"]: mapname,
+                                     _config["SNPBLOCKS_BLOCK_NUMBER"]: blk,
+                                     _config["SNPBLOCKS_SAMPLE_ATTR"]: sample})
          
-    except IndexError:
-        return None
-    except ValueError:
+    except (IndexError, ValueError, UnboundLocalError):
         return None
     
-    block = _SNPBLOCKS.find_one({_config["SNPBLOCKS_MAP_ATTR"]: mapname,
-                                 _config["SNPBLOCKS_BLOCK_NUMBER"]: blk,
-                                 _config["SNPBLOCKS_SAMPLE_ATTR"]: sample})
+
     if block is None:
         return None
     res = {}
@@ -301,14 +306,14 @@ def insert_file(file, individual_id=None):
 
 
 
-def list_files(individual_id=None):
-    res = []
-    cur = None
-    if individual_id is None:
-        cur = _db.fs.files.find({})
-    else:
-        cur = _db.fs.files.find({_config["FILES_INDIVIDUAL_ATTR"]: individual_id})
-    return list(cur)
+def list_files(individual_id=None, name=None):
+    query = {}
+    if individual_id is not None:
+        query.update({_config["FILES_INDIVIDUAL_ATTR"]: individual_id})
+    if name is not None:
+        query.update({"filename": name})
+
+    return list(_db.fs.files.find(query, {"chunkSize": 0}))
 
 
 

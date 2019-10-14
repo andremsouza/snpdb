@@ -74,17 +74,18 @@ if __name__ == "__main__":
     # find-snps
     p = subparsers.add_parser("find-snps",
                              help="search snps in the database")
+    p.add_argument("--id", help="match numeric internal id exactly", type=int)
     p.add_argument("--name", help="match name exactly")
     p.add_argument("--min-chr", help="match only snps whose chromosome is " + 
                                      "at least MIN_CHR (lexicographically)")
     p.add_argument("--max-chr", help="match only snps whose chromosome is " + 
                                      "at most MAX_CHR (lexicographically)")
     p.add_argument("--min-pos", help="match only snps whose position is " + 
-                                     "at least MIN_POS",
-                   type=int)
+                                     "at least MIN_POS", type=int)
     p.add_argument("--max-pos", help="match only snps whose position is " + 
-                                     "at most MAX_POS",
-                   type=int) 
+                                     "at most MAX_POS", type=int)
+    p.add_argument("--map", help="match snps that belong to MAP")
+
 
 
     # find-maps
@@ -109,6 +110,46 @@ if __name__ == "__main__":
     p.add_argument("--map", help="match only individuals which have a " +
                                  "sample with this specific map")
 
+    
+
+    # find-samples
+    p = subparsers.add_parser("find-samples",
+                              help="search samples in the database")
+    p.add_argument("--id", help="match sample id within map")
+    p.add_argument("--map", help="match map the sample belongs to")
+
+
+
+    # get-snp-genotype
+    p = subparsers.add_parser("get-snp-genotype",
+                               help="retrive the genotype given a sample " +
+                                    "and a SNP")
+    p.add_argument("map", help="map to which the sample belongs")
+    p.add_argument("sample", help="id of the sample")
+    p.add_argument("snp", help="internal id of the SNP", type=int)
+
+
+    # put-file
+    p = subparsers.add_parser("put-file", help="upload file to the database")
+    p.add_argument("file", help="path of file to upload", nargs="+")
+    p.add_argument("--individual", help="internal id of an individual" +
+    " to be associated with the file")
+    
+    # find-files
+    p = subparsers.add_parser("find-files",
+                              help="search files in the database")
+    p.add_argument("--individual", help="match only files associated with " +
+                                "individual whose internal id is INDIVIDUAL")
+    p.add_argument("--name", help="match file name exactly")
+    
+    # get-files
+    p = subparsers.add_parser("get-files",
+                              help="download files from the database")
+    p.add_argument("--individual", help="download only files associated " +
+                                "with individual whose internal id is INDIVIDUAL")
+    p.add_argument("--name",
+                   help="download only files with the specified NAME")
+
 
     args = parser.parse_args()
     if args.subcommand == "import-map":
@@ -128,7 +169,8 @@ if __name__ == "__main__":
         print(f"Done in {time.time() - start:.3f} s.")
     elif args.subcommand == "find-snps":
         for snp in snpdb.find_snp(args.name, args.min_chr, args.max_chr,
-                                  args.min_pos, args.max_pos):
+                                  args.min_pos, args.max_pos, args.map,
+                                  args.id):
             print(snp)
     elif args.subcommand == "find-maps":
         for map in snpdb.find_maps(args.name, args.min_size, args.max_size,
@@ -137,5 +179,20 @@ if __name__ == "__main__":
     elif args.subcommand == "find-individuals":
         for ind in snpdb.find_individuals(None, args.name, args.map, args.sample):
             print(ind)
+    elif args.subcommand == "find-samples":
+        for sample in snpdb.find_sample(args.id, args.map):
+            print(sample)
+    elif args.subcommand == "get-snp-genotype":
+       print(snpdb.find_snp_of_sample(args.map, args.sample, args.snp))
+    elif args.subcommand == "put-file":
+        for fname in args.file:
+            with open(fname, "rb") as f:
+                snpdb.insert_file(f, args.individual)
+    elif args.subcommand == "find-files":
+        for file in snpdb.list_files(args.individual, args.name):
+            print(file)
+    elif args.subcommand == "get-files":
+        snpdb.get_files(snpdb.list_files(args.individual, args.name))
+            
     elif args.subcommand is None:
         print("Subcommand required. Use -h for help.")
