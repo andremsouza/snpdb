@@ -73,7 +73,7 @@ def mass_import(directory, maps_only=False, clear_before_each=False, **kwargs):
             importlib.reload(cli)
 
         t_m = _stopwatch(cli.import_map,
-                         os.path.join(directory, name + mapfileext),
+                         name + mapfileext,
                          fmt,
                          name,
                          report=True,
@@ -82,9 +82,9 @@ def mass_import(directory, maps_only=False, clear_before_each=False, **kwargs):
         if not maps_only and pedfileext is not None:
             idfilename = None
             if idsfileext is not None:
-                idfilename = os.path.join(directory, name + idsfileext)
+                idfilename = name + idsfileext
             t_p = _stopwatch(cli.import_samples,
-                             os.path.join(directory, name + pedfileext),
+                             name + pedfileext,
                              fmt,
                              name,
                              idfilename=idfilename,

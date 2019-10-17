@@ -498,6 +498,9 @@ def export_samples(samples, map, sample_writer, out_file_path):
 
 
 def get_db_stats(scale=1):
+    colls = [_config[key] for key in _config if key[-4:] == "COLL"]
+    for coll in colls:
+        _db.command("validate", coll, full=True)
     return _db.command("dbstats", scale=scale)
 
 
