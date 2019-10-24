@@ -285,12 +285,14 @@ class VcfSampleReader(SampleReader):
                     header = line.split()
                     break
             sample_strs = [header[i] + " " for i in range(9, len(header))]
+            m = []
             for line in f:
                 tokens = line.split()
                 if len(tokens) != len(header):
                     raise Exception("Missing column value.")
-                for i in range(9, len(tokens)):
-                    sample_strs[i-9] += tokens[i] + " "
+                m.append(tokens[9:])
+            for i in range(len(sample_strs)):
+                sample_strs[i] += " ".join((line[i] for line in m))
         for i, sample_str in enumerate(sample_strs):
             snps = sample_str.split()
      
