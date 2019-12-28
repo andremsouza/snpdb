@@ -849,7 +849,7 @@ def export_samples(samples, map, sample_writer, out_file_path):
     #TODO: optimize performance by reducing number of calls to find_sample.
     wsamples = []
     if len(samples) == 0:
-        samples = [sample[_config.SAMPLES_ID_ATTR] for sample in find_sample(map=map)]
+        samples = [sample[_config["SAMPLES_ID_ATTR"]] for sample in find_sample(map=map)]
     for id in samples:
         current = {sample_writer.SAMPLE_ID: id,
                    sample_writer.SAMPLE_GENOTYPE: get_sample_data(id, map)}
@@ -863,11 +863,11 @@ def export_samples(samples, map, sample_writer, out_file_path):
 
 
 # Used for testing purposes.
-#def get_db_stats(scale=1):
-#    colls = [_config[key] for key in _config if key[-4:] == "COLL"]
-#    for coll in colls:
-#        _db.command("validate", coll, full=True)
-#    return _db.command("dbstats", scale=scale)
+def get_db_stats(scale=1):
+    colls = [_config[key] for key in _config if key[-4:] == "COLL"]
+    for coll in colls:
+        _db.command("validate", coll, full=True)
+    return _db.command("dbstats", scale=scale)
 
 
 
