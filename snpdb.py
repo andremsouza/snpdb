@@ -290,7 +290,8 @@ _GFS = GridFS(_db)
 
 
 def find_snp(id=None, min_chrom=None, max_chrom=None,
-             min_pos=None, max_pos=None, map=None, iid=None):
+             min_pos=None, max_pos=None, map=None, iid=None,
+             chr=None):
     """Search SNPs in the database.
 
     Returns a list of dicts, each representing a SNP.
@@ -308,6 +309,7 @@ def find_snp(id=None, min_chrom=None, max_chrom=None,
                      smaller or equal than the one given.
     map=None         Match only SNPs that are contained within the map given.
     iid=None         Match only the SNP with the given internal numeric id.
+    chr=None         Match only the SNPs with the given chromosome.
     """
     chrom = _config["SNPS_CHROMOSOME_ATTR"]
     pos = _config["SNPS_POSITION_ATTR"]
@@ -319,6 +321,11 @@ def find_snp(id=None, min_chrom=None, max_chrom=None,
         chrom_query.update({"$gte": min_chrom})
     if max_chrom is not None:
         chrom_query.update({"$lte": max_chrom})
+    if chr is not None:
+        try:
+            chrom_query.update({"$eq": int(chr)})
+        except ValueError:
+            chrom_query.update({"$eq": chr})
     if min_pos is not None:
         pos_query.update({"$gte": min_pos})
     if max_pos is not None:

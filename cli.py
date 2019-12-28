@@ -96,10 +96,11 @@ if __name__ == "__main__":
                              help="search snps in the database")
     p.add_argument("--id", help="match numeric internal id exactly", type=int)
     p.add_argument("--name", help="match name exactly")
+    p.add_argument("--chr", help="match chromosome exactly")
     p.add_argument("--min-chr", help="match only snps whose chromosome is " + 
-                                     "at least MIN_CHR (lexicographically)")
+                                     "at least MIN_CHR (integer)", type=int)
     p.add_argument("--max-chr", help="match only snps whose chromosome is " + 
-                                     "at most MAX_CHR (lexicographically)")
+                                     "at most MAX_CHR (integer)", type=int)
     p.add_argument("--min-pos", help="match only snps whose position is " + 
                                      "at least MIN_POS", type=int)
     p.add_argument("--max-pos", help="match only snps whose position is " + 
@@ -212,7 +213,7 @@ if __name__ == "__main__":
     elif args.subcommand == "find-snps":
         for snp in snpdb.find_snp(args.name, args.min_chr, args.max_chr,
                                   args.min_pos, args.max_pos, args.map,
-                                  args.id):
+                                  args.id, args.chr):
             print(snp)
     elif args.subcommand == "find-maps":
         for map in snpdb.find_maps(args.name, args.min_size, args.max_size,

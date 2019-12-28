@@ -1,6 +1,14 @@
 from snpdb import MapReader, SampleReader
 import re
 
+
+def _chromosome_to_int(chrom):
+    try:
+        return int(chrom)
+    except:
+        return chrom
+
+
 class Z125MapReader(MapReader):
     
     def __iter__(self):
@@ -9,7 +17,7 @@ class Z125MapReader(MapReader):
             for line in f:
                 (name, chrom, pos) = line.split()
                 snp = {self.SNP_NAME: name,
-                       self.SNP_CHROM: chrom,
+                       self.SNP_CHROM: _chromosome_to_int(chrom),
                        self.SNP_POS: int(pos)}
                 yield snp
 
@@ -62,7 +70,7 @@ class PlinkMapReader(MapReader):
             for line in f:
                 (chrom, id, dist, pos) = line.split()
                 snp = {self.SNP_NAME: id,
-                       self.SNP_CHROM: chrom,
+                       self.SNP_CHROM: _chromosome_to_int(chrom),
                        self.SNP_POS: int(pos)}
                 if dist != "0":
                     snp["dist"] = int(dist)
@@ -227,7 +235,7 @@ class VcfMapReader(MapReader):
                 values = line.split()
                 (chrom, pos, snp_id, ref, alt, qual, fil, info) = values[0:8]
                 snp = {
-                    self.SNP_CHROM: chrom,
+                    self.SNP_CHROM: _chromosome_to_int(chrom),
                     self.SNP_POS: int(pos),
                     "ref": ref,
                     "alt": alt.split(","),
@@ -313,5 +321,3 @@ class VcfSampleReader(SampleReader):
                     self.__len = len(line.split())-9
                     break
         return self.__len
-                
-
