@@ -10,15 +10,16 @@ def _chromosome_to_int(chrom):
 
 
 class Z125MapReader(MapReader):
-    
     def __iter__(self):
         with open(self._MAP_FILE, "r") as f:
             next(f)
             for line in f:
                 (name, chrom, pos) = line.split()
-                snp = {self.SNP_NAME: name,
-                       self.SNP_CHROM: _chromosome_to_int(chrom),
-                       self.SNP_POS: int(pos)}
+                snp = {
+                    self.SNP_NAME: name,
+                    self.SNP_CHROM: _chromosome_to_int(chrom),
+                    self.SNP_POS: int(pos),
+                }
                 yield snp
 
     def __len__(self):
@@ -31,24 +32,20 @@ class Z125MapReader(MapReader):
                 pass
             self.__len = cnt
         return self.__len
-    
+
     def map_meta(self):
         return {self.MAP_FORMAT: "0125"}
 
 
-
-
 class Z125SampleReader(SampleReader):
-    
     def __iter__(self):
         with open(self._PED_FILE, "r") as f:
             next(f)
             for line in f:
                 (id, genotype) = line.split()
-                sample = {self.SAMPLE_ID: id,
-                          self.SAMPLE_GENOTYPE: {"g": genotype}}
+                sample = {self.SAMPLE_ID: id, self.SAMPLE_GENOTYPE: {"g": genotype}}
                 yield sample
-    
+
     def __len__(self):
         try:
             return self.__len
@@ -61,17 +58,16 @@ class Z125SampleReader(SampleReader):
         return self.__len
 
 
-
-
 class PlinkMapReader(MapReader):
-    
     def __iter__(self):
         with open(self._MAP_FILE, "r") as f:
             for line in f:
                 (chrom, id, dist, pos) = line.split()
-                snp = {self.SNP_NAME: id,
-                       self.SNP_CHROM: _chromosome_to_int(chrom),
-                       self.SNP_POS: int(pos)}
+                snp = {
+                    self.SNP_NAME: id,
+                    self.SNP_CHROM: _chromosome_to_int(chrom),
+                    self.SNP_POS: int(pos),
+                }
                 if dist != "0":
                     snp["dist"] = int(dist)
                 yield snp
@@ -86,18 +82,14 @@ class PlinkMapReader(MapReader):
                 pass
             self.__len = cnt + 1
         return self.__len
-    
+
     def map_meta(self):
         return {self.MAP_FORMAT: "PLINK"}
 
 
-
-
 class PlinkSampleReader(SampleReader):
-    
     def __iter__(self):
-        COLUMN_NAMES = ["fid", self.SAMPLE_ID, "pid",
-                        "mid", "sex", "aff"]
+        COLUMN_NAMES = ["fid", self.SAMPLE_ID, "pid", "mid", "sex", "aff"]
         with open(self._PED_FILE, "r") as f:
             for line in f:
                 sample = dict()
@@ -105,11 +97,10 @@ class PlinkSampleReader(SampleReader):
                 for (attr_name, attr) in zip(COLUMN_NAMES, tokens[0:6]):
                     if attr != "0":
                         sample[attr_name] = attr
-                g = {"g": [tokens[i] + tokens[i+1]
-                          for i in range(6, len(tokens), 2)]}
+                g = {"g": [tokens[i] + tokens[i + 1] for i in range(6, len(tokens), 2)]}
                 sample[self.SAMPLE_GENOTYPE] = g
                 yield sample
-            
+
     def __len__(self):
         try:
             return self.__len
@@ -118,14 +109,11 @@ class PlinkSampleReader(SampleReader):
         with open(self._PED_FILE, "r") as f:
             for cnt, l in enumerate(f):
                 pass
-            self.__len = cnt+1
+            self.__len = cnt + 1
         return self.__len
 
 
-
-
 class FinalReportMapReader(MapReader):
-    
     def __iter__(self):
         with open(self._MAP_FILE, "r") as f:
             while "[Data]" not in next(f):
@@ -160,15 +148,12 @@ class FinalReportMapReader(MapReader):
                 cnt += 1
             self.__len = cnt
         return self.__len
-    
+
     def map_meta(self):
         return {self.MAP_FORMAT: "FR"}
 
 
-
-
 class FinalReportSampleReader(SampleReader):
-    
     def __iter__(self):
         with open(self._PED_FILE, "r") as f:
             while "[Data]" not in next(f):
@@ -176,20 +161,47 @@ class FinalReportSampleReader(SampleReader):
             next(f)
             prev_sample_id = None
             sample = None
-            g = {"a1f": [], "a2f": [], "a1t": [],
-                 "a2t": [], "a1ab": [], "a2ab": [],
-                 "gc": [], "x": [], "y": []}
-            for line in f: 
-                (snp_id, sample_id, a1f, a2f, a1t,
-                a2t, a1ab, a2ab, gc, x, y) = line.split()
+            g = {
+                "a1f": [],
+                "a2f": [],
+                "a1t": [],
+                "a2t": [],
+                "a1ab": [],
+                "a2ab": [],
+                "gc": [],
+                "x": [],
+                "y": [],
+            }
+            for line in f:
+                (
+                    snp_id,
+                    sample_id,
+                    a1f,
+                    a2f,
+                    a1t,
+                    a2t,
+                    a1ab,
+                    a2ab,
+                    gc,
+                    x,
+                    y,
+                ) = line.split()
                 if prev_sample_id != sample_id:
                     if prev_sample_id is not None:
                         sample[self.SAMPLE_GENOTYPE] = g
                         yield sample
                     sample = {self.SAMPLE_ID: sample_id}
-                    g = {"a1f": [], "a2f": [], "a1t": [],
-                         "a2t": [], "a1ab": [], "a2ab": [],
-                         "gc": [], "x": [], "y": []}
+                    g = {
+                        "a1f": [],
+                        "a2f": [],
+                        "a1t": [],
+                        "a2t": [],
+                        "a1ab": [],
+                        "a2ab": [],
+                        "gc": [],
+                        "x": [],
+                        "y": [],
+                    }
                 g["a1f"].append(a1f)
                 g["a2f"].append(a2f)
                 g["a1t"].append(a1t)
@@ -202,7 +214,7 @@ class FinalReportSampleReader(SampleReader):
                 prev_sample_id = sample_id
         sample[self.SAMPLE_GENOTYPE] = g
         yield sample
-            
+
     def __len__(self):
         try:
             return self.__len
@@ -214,7 +226,7 @@ class FinalReportSampleReader(SampleReader):
             next(f)
             prev_sample_id = None
             cnt = 0
-            for line in f: 
+            for line in f:
                 sample_id = line.split()[1]
                 if prev_sample_id != sample_id:
                     cnt += 1
@@ -223,10 +235,7 @@ class FinalReportSampleReader(SampleReader):
         return cnt
 
 
-
-
 class VcfMapReader(MapReader):
-    
     def __iter__(self):
         with open(self._MAP_FILE) as f:
             while next(f)[0:2] == "##":
@@ -241,13 +250,12 @@ class VcfMapReader(MapReader):
                     "alt": alt.split(","),
                     "qual": float(qual),
                     "filter": fil,
-                    "info": info
+                    "info": info,
                 }
 
                 if snp_id != ".":
                     snp.update({self.SNP_NAME: snp_id})
                 yield snp
-
 
     def __len__(self):
         with open(self._MAP_FILE) as f:
@@ -255,12 +263,12 @@ class VcfMapReader(MapReader):
                 pass
             for cnt, line in enumerate(f):
                 pass
-            return cnt+1
+            return cnt + 1
 
     def map_meta(self):
         meta = {self.MAP_FORMAT: "VCF"}
         meta_line = re.compile("##(.+?)=(.+)")
-        key_value = re.compile("([^,]+?)=((?:\".*\")|(?:[^\"][^,]*)(?:,|$))")
+        key_value = re.compile('([^,]+?)=((?:".*")|(?:[^"][^,]*)(?:,|$))')
         with open(self._MAP_FILE, "r") as f:
             for line in f:
                 line = line.rstrip("\n")
@@ -273,18 +281,14 @@ class VcfMapReader(MapReader):
                         meta[left] = []
                     data = dict()
                     for (le, ri) in key_value.findall(right[1:-1]):
-                      data[le] = ri.rstrip(",").rstrip("\"").lstrip("\"")
+                        data[le] = ri.rstrip(",").rstrip('"').lstrip('"')
                     meta[left].append(data)
                 else:
                     meta[left] = right
         return meta
 
 
-
-
-
 class VcfSampleReader(SampleReader):
-
     def __iter__(self):
         with open(self._PED_FILE) as f:
             header = None
@@ -303,12 +307,10 @@ class VcfSampleReader(SampleReader):
                 sample_strs[i] += " ".join((line[i] for line in m))
         for i, sample_str in enumerate(sample_strs):
             snps = sample_str.split()
-     
-            gen = {"g": snps[1:]}
-            sample = {self.SAMPLE_ID: snps[0],
-                      self.SAMPLE_GENOTYPE: gen}
-            yield sample
 
+            gen = {"g": snps[1:]}
+            sample = {self.SAMPLE_ID: snps[0], self.SAMPLE_GENOTYPE: gen}
+            yield sample
 
     def __len__(self):
         try:
@@ -318,6 +320,6 @@ class VcfSampleReader(SampleReader):
         with open(self._PED_FILE) as f:
             for line in f:
                 if line[0:2] != "##":
-                    self.__len = len(line.split())-9
+                    self.__len = len(line.split()) - 9
                     break
         return self.__len

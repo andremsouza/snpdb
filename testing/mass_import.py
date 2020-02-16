@@ -5,22 +5,25 @@ import snpdb
 import random
 import importlib
 
+
 def _stopwatch(f, *args, **kwargs):
     start = time.time()
     f(*args, **kwargs)
     return time.time() - start
- 
+
 
 def _reset_db():
     os.system("mongo mongo_setup.js > /dev/null")
 
-    
-_EXT_FORMAT = {".0125map": "0125",
-               ".0125ped": "0125",
-               ".plmap": "pl",
-               ".plped": "pl",
-               ".vcf": "vcf",
-               ".fr": "fr"}
+
+_EXT_FORMAT = {
+    ".0125map": "0125",
+    ".0125ped": "0125",
+    ".plmap": "pl",
+    ".plped": "pl",
+    ".vcf": "vcf",
+    ".fr": "fr",
+}
 
 _MAP_EXTS = {".0125map", ".plmap"}
 _PED_EXTS = {".0125ped", ".plped", ".vcf", ".fr"}
@@ -48,7 +51,7 @@ def mass_import(directory, maps_only=False, clear_before_each=False, **kwargs):
             raise Exception("Multiple ped files with the same name.")
         if len(iids) > 1:
             raise Exception("Multiple id files with the same name.")
-        
+
         mapfileext, pedfileext, idsfileext = None, None, None
         if len(imap) == 1:
             mapfileext = imap.pop()
@@ -56,50 +59,52 @@ def mass_import(directory, maps_only=False, clear_before_each=False, **kwargs):
             pedfileext = iped.pop()
         if len(iids) == 1:
             idsfileext = iids.pop()
-        
+
         if mapfileext is None:
             mapfileext = pedfileext
-        
-        if (mapfileext is not None and pedfileext is not None and
-            _EXT_FORMAT[mapfileext] != _EXT_FORMAT[pedfileext]):
+
+        if (
+            mapfileext is not None
+            and pedfileext is not None
+            and _EXT_FORMAT[mapfileext] != _EXT_FORMAT[pedfileext]
+        ):
             raise Exception("Incompatible map and ped files.")
 
         fmt = _EXT_FORMAT[mapfileext]
-        
+
         print("-" * 100)
         if clear_before_each:
             _reset_db()
             importlib.reload(snpdb)
             importlib.reload(cli)
 
-        t_m = _stopwatch(cli.import_map,
-                         name + mapfileext,
-                         fmt,
-                         name,
-                         report=True,
-                         **kwargs)
-        
+        t_m = _stopwatch(
+            cli.import_map, name + mapfileext, fmt, name, report=True, **kwargs
+        )
+
         if not maps_only and pedfileext is not None:
             idfilename = None
             if idsfileext is not None:
                 idfilename = name + idsfileext
-            t_p = _stopwatch(cli.import_samples,
-                             name + pedfileext,
-                             fmt,
-                             name,
-                             idfilename=idfilename,
-                             report=True)
+            t_p = _stopwatch(
+                cli.import_samples,
+                name + pedfileext,
+                fmt,
+                name,
+                idfilename=idfilename,
+                report=True,
+            )
         else:
-            t_p = 0.0            
+            t_p = 0.0
 
         stats = snpdb.get_db_stats(2 ** 20)
         data = stats["dataSize"]
         storage = stats["storageSize"]
-        print(f"{name}: "+
-              f"map: {t_m:.3f} s, ped: {t_p:.3f} s, " +
-              f"db size (raw): {data:.1f} MiB, compressed: {storage:.1f} MiB")
-    
-
+        print(
+            f"{name}: "
+            + f"map: {t_m:.3f} s, ped: {t_p:.3f} s, "
+            + f"db size (raw): {data:.1f} MiB, compressed: {storage:.1f} MiB"
+        )
 
 
 def create_individuals(n):
@@ -107,11 +112,9 @@ def create_individuals(n):
     snpdb.create_individuals(inds)
 
 
-
-
 def import_media_randomly(directory):
     ids = [ind["_id"] for ind in snpdb.find_individuals()]
-    total_t =  0.
+    total_t = 0.0
     for filename in os.listdir(directory):
         id = random.choice(ids)
         f = open(os.path.join(directory, filename), "rb")
@@ -119,11 +122,13 @@ def import_media_randomly(directory):
         total_t += t
         f.close()
         print(f"Added file {filename} to individual {id} in {t:.3f} s.")
-    
+
     time.sleep(61)
     stats = snpdb.get_db_stats(2 ** 20)
     data = stats["dataSize"]
     storage = stats["storageSize"]
 
-    print(f"Total time: {total_t:.3f} s, " +
-           f"storage: {data:.1f} MiB(raw), {storage:.1f} MiB (compressed)")
+    print(
+        f"Total time: {total_t:.3f} s, "
+        + f"storage: {data:.1f} MiB(raw), {storage:.1f} MiB (compressed)"
+    )
