@@ -2,6 +2,7 @@ This is a Python application for managing single-nucleotide polymorphism data us
 
 Please refer to the documentation in `snpdb.py` for more info.
 
+**This project was made as an experiment and is not suitable for production use.**
 
 ## Installation
 
