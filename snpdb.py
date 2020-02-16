@@ -919,7 +919,7 @@ def summarize(individual):
             else:
                 result[f"{map_format}_count"] += 1
                 result[map_format].append((map_name, sample_id))
-    files = list_files(individual_id=individual["_id"])
+    files = list_files(individual_id=str(individual["_id"]))
     result["files"] = [f["filename"] for f in files]
     result["files_count"] = len(files)
     return result
