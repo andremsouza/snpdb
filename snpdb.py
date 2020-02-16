@@ -567,8 +567,10 @@ def insert_file(file, individual_id=None):
     ----------
     file                    File-like object to import
     individual_id=None      Identifier of the individual associated with the
-                            the file. Currently has no special meaning and any
-                            identifier (including non-existing ones) can be used.
+                            the file. It has no special meaning, except for the
+                            summarize method, which considers that a file is
+                            associated with an individual iif this value is 
+                            is equal to its internal id.
     """
     if individual_id is None:
         _GFS.put(file, filename=os.path.basename(file.name))
@@ -861,6 +863,44 @@ def export_samples(samples, map, sample_writer, out_file_path):
     writer.write(out_file_path)
 
 
+def summarize(individual):
+    """Summarizes all data about an individual.
+
+    Returns a dict with the following keys:
+    <map format>:<str,str list>     list of maps the individual is in,
+                                for that format, with sample ids
+    <map format>_count: <int>   count of maps the individual is in,
+                                for that format
+    files: <str list>           list of file names associated with
+                                the individual
+    files_count: <int>          count of files associated with the
+                                individual
+    
+    Parameters
+    ----------
+    individual      dict representing an individual, as
+                    returned by find_individuals
+    """
+    
+    result = {"files": [], "files_count": 0}
+    for s in individual[_config["INDIVIDUALS_SAMPLE_LIST_ATTR"]]:
+        map_name = s[_config["SAMPLES_MAP_ATTR"]]
+        sample_id = s[_config["SAMPLES_ID_ATTR"]]
+        try:
+            map_format = find_maps(id=map_name)[0][_config["MAPS_FORMAT_ATTR"]]
+        except:
+            print(f"Warning: couldn't retrieve format for map {map_name}")
+        else:
+            if map_format not in result:
+                result[f"{map_format}_count"] = 1
+                result[map_format] = [(map_name, sample_id)]
+            else:
+                result[f"{map_format}_count"] += 1
+                result[map_format].append((map_name, sample_id))
+    files = list_files(individual_id=individual["_id"])
+    result["files"] = [f["filename"] for f in files]
+    result["files_count"] = len(files)
+    return result
 
 # Used for testing purposes.
 def get_db_stats(scale=1):

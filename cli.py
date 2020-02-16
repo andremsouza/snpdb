@@ -3,8 +3,10 @@ import argparse
 import snpdb
 import time
 
+from pprint import pprint
 from readers import *
 from writers import *
+
 
 _FORMAT_CHOICES = ["0125", "pl", "fr", "vcf"]
 _MAP_READERS = [Z125MapReader, PlinkMapReader,
@@ -191,8 +193,19 @@ if __name__ == "__main__":
     p.add_argument("sample", help="ids of the samples to export, if none " +
                                    "is specified, will export every sample " +
                                    "within map", nargs="*")
-
     
+    
+    # summarize
+    p = subparsers.add_parser("summarize",
+                             help="search individuals in the database and summarize all data on each match")
+    p.add_argument("--name", help="match at least one of the individuals' " +
+                                  "names (tatoos) exactly")
+    p.add_argument("--sample", help="match only individuals which have a " + 
+                                    "sample with this specific id")
+    p.add_argument("--map", help="match only individuals which have a " +
+                                 "sample with this specific map")
+
+
 
     args = parser.parse_args()
     if args.subcommand == "import-map":
@@ -240,5 +253,8 @@ if __name__ == "__main__":
         export_map(args.map, args.format, args.outfile) 
     elif args.subcommand == "export-samples":
         export_samples(args.sample, args.map, args.format, args.outfile)
+    elif args.subcommand == "summarize":
+        for ind in snpdb.find_individuals(None, args.name, args.map, args.sample):
+            pprint(snpdb.summarize(ind))
     elif args.subcommand is None:
         print("Subcommand required. Use -h for help.")
