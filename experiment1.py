@@ -144,6 +144,10 @@ for i in range(N):
                      report=False)
     t = time.time() - t
     results[experiment_id][size_id]['map']['time'].append(t)
+    # Validating statistics
+    snpdb._db.command("validate", snpdb._config["MAPS_COLL"], full=True)
+    snpdb._db.command("validate", snpdb._config["MAPSNPS_COLL"], full=True)
+    snpdb._db.command("validate", snpdb._config["SNPS_COLL"], full=True)
     # map_size = _MAPS + _MAPSNPS + _SNPS
     map_size = snpdb._db.command(
         "collstats",
@@ -168,6 +172,10 @@ for i in range(N):
                          report=False)
     t = time.time() - t
     results[experiment_id][size_id]['sample']['time'].append(t)
+    # Validating Statistics
+    snpdb._db.command("validate", snpdb._config["SAMPLES_COLL"], full=True)
+    snpdb._db.command("validate", snpdb._config["SNPBLOCKS_COLL"], full=True)
+    snpdb._db.command("validate", snpdb._config["INDIVIDUALS_COLL"], full=True)
     # sample_size = _SAMPLES + _SNPBLOCKS + _INDS
     sample_size = snpdb._db.command(
         "collstats",
@@ -269,6 +277,10 @@ for i in range(N):
                      report=False)
     t = time.time() - t
     results[experiment_id][size_id]['map']['time'].append(t)
+    # Validating statistics
+    snpdb._db.command("validate", snpdb._config["MAPS_COLL"], full=True)
+    snpdb._db.command("validate", snpdb._config["MAPSNPS_COLL"], full=True)
+    snpdb._db.command("validate", snpdb._config["SNPS_COLL"], full=True)
     # map_size = _MAPS + _MAPSNPS + _SNPS
     map_size = snpdb._db.command(
         "collstats",
@@ -293,6 +305,10 @@ for i in range(N):
                          report=False)
     t = time.time() - t
     results[experiment_id][size_id]['sample']['time'].append(t)
+    # Validating Statistics
+    snpdb._db.command("validate", snpdb._config["SAMPLES_COLL"], full=True)
+    snpdb._db.command("validate", snpdb._config["SNPBLOCKS_COLL"], full=True)
+    snpdb._db.command("validate", snpdb._config["INDIVIDUALS_COLL"], full=True)
     # sample_size = _SAMPLES + _SNPBLOCKS + _INDS
     sample_size = snpdb._db.command(
         "collstats",
@@ -392,6 +408,10 @@ for i in range(N):
                      report=False)
     t = time.time() - t
     results[experiment_id][size_id]['map']['time'].append(t)
+    # Validating statistics
+    snpdb._db.command("validate", snpdb._config["MAPS_COLL"], full=True)
+    snpdb._db.command("validate", snpdb._config["MAPSNPS_COLL"], full=True)
+    snpdb._db.command("validate", snpdb._config["SNPS_COLL"], full=True)
     # map_size = _MAPS + _MAPSNPS + _SNPS
     map_size = snpdb._db.command(
         "collstats",
@@ -417,6 +437,10 @@ for i in range(N):
         report=False)
     t = time.time() - t
     results[experiment_id][size_id]['sample']['time'].append(t)
+    # Validating Statistics
+    snpdb._db.command("validate", snpdb._config["SAMPLES_COLL"], full=True)
+    snpdb._db.command("validate", snpdb._config["SNPBLOCKS_COLL"], full=True)
+    snpdb._db.command("validate", snpdb._config["INDIVIDUALS_COLL"], full=True)
     # sample_size = _SAMPLES + _SNPBLOCKS + _INDS
     sample_size = snpdb._db.command(
         "collstats",
@@ -504,6 +528,10 @@ for i in range(N):
                      report=False)
     t = time.time() - t
     results[experiment_id][size_id]['map']['time'].append(t)
+    # Validating statistics
+    snpdb._db.command("validate", snpdb._config["MAPS_COLL"], full=True)
+    snpdb._db.command("validate", snpdb._config["MAPSNPS_COLL"], full=True)
+    snpdb._db.command("validate", snpdb._config["SNPS_COLL"], full=True)
     # map_size = _MAPS + _MAPSNPS + _SNPS
     map_size = snpdb._db.command(
         "collstats",
@@ -529,6 +557,10 @@ for i in range(N):
         report=False)
     t = time.time() - t
     results[experiment_id][size_id]['sample']['time'].append(t)
+    # Validating Statistics
+    snpdb._db.command("validate", snpdb._config["SAMPLES_COLL"], full=True)
+    snpdb._db.command("validate", snpdb._config["SNPBLOCKS_COLL"], full=True)
+    snpdb._db.command("validate", snpdb._config["INDIVIDUALS_COLL"], full=True)
     # sample_size = _SAMPLES + _SNPBLOCKS + _INDS
     sample_size = snpdb._db.command(
         "collstats",
@@ -622,6 +654,10 @@ for i in range(N):
                      report=False)
     t = time.time() - t
     results[experiment_id][size_id]['map']['time'].append(t)
+    # Validating statistics
+    snpdb._db.command("validate", snpdb._config["MAPS_COLL"], full=True)
+    snpdb._db.command("validate", snpdb._config["MAPSNPS_COLL"], full=True)
+    snpdb._db.command("validate", snpdb._config["SNPS_COLL"], full=True)
     # map_size = _MAPS + _MAPSNPS + _SNPS
     map_size = snpdb._db.command(
         "collstats",
@@ -646,6 +682,10 @@ for i in range(N):
                          report=False)
     t = time.time() - t
     results[experiment_id][size_id]['sample']['time'].append(t)
+    # Validating Statistics
+    snpdb._db.command("validate", snpdb._config["SAMPLES_COLL"], full=True)
+    snpdb._db.command("validate", snpdb._config["SNPBLOCKS_COLL"], full=True)
+    snpdb._db.command("validate", snpdb._config["INDIVIDUALS_COLL"], full=True)
     # sample_size = _SAMPLES + _SNPBLOCKS + _INDS
     sample_size = snpdb._db.command(
         "collstats",
@@ -732,6 +772,10 @@ for i in range(N):
                      report=False)
     t = time.time() - t
     results[experiment_id][size_id]['map']['time'].append(t)
+    # Validating statistics
+    snpdb._db.command("validate", snpdb._config["MAPS_COLL"], full=True)
+    snpdb._db.command("validate", snpdb._config["MAPSNPS_COLL"], full=True)
+    snpdb._db.command("validate", snpdb._config["SNPS_COLL"], full=True)
     # map_size = _MAPS + _MAPSNPS + _SNPS
     map_size = snpdb._db.command(
         "collstats",
@@ -756,6 +800,10 @@ for i in range(N):
                          report=False)
     t = time.time() - t
     results[experiment_id][size_id]['sample']['time'].append(t)
+    # Validating Statistics
+    snpdb._db.command("validate", snpdb._config["SAMPLES_COLL"], full=True)
+    snpdb._db.command("validate", snpdb._config["SNPBLOCKS_COLL"], full=True)
+    snpdb._db.command("validate", snpdb._config["INDIVIDUALS_COLL"], full=True)
     # sample_size = _SAMPLES + _SNPBLOCKS + _INDS
     sample_size = snpdb._db.command(
         "collstats",
@@ -859,6 +907,10 @@ for i in range(N):
                      report=False)
     t = time.time() - t
     results[experiment_id][size_id]['map']['time'].append(t)
+    # Validating statistics
+    snpdb._db.command("validate", snpdb._config["MAPS_COLL"], full=True)
+    snpdb._db.command("validate", snpdb._config["MAPSNPS_COLL"], full=True)
+    snpdb._db.command("validate", snpdb._config["SNPS_COLL"], full=True)
     # map_size = _MAPS + _MAPSNPS + _SNPS
     map_size = snpdb._db.command(
         "collstats",
@@ -882,6 +934,10 @@ for i in range(N):
                          report=False)
     t = time.time() - t
     results[experiment_id][size_id]['sample']['time'].append(t)
+    # Validating Statistics
+    snpdb._db.command("validate", snpdb._config["SAMPLES_COLL"], full=True)
+    snpdb._db.command("validate", snpdb._config["SNPBLOCKS_COLL"], full=True)
+    snpdb._db.command("validate", snpdb._config["INDIVIDUALS_COLL"], full=True)
     # sample_size = _SAMPLES + _SNPBLOCKS + _INDS
     sample_size = snpdb._db.command(
         "collstats",
@@ -983,6 +1039,10 @@ for i in range(N):
                      report=False)
     t = time.time() - t
     results[experiment_id][size_id]['map']['time'].append(t)
+    # Validating statistics
+    snpdb._db.command("validate", snpdb._config["MAPS_COLL"], full=True)
+    snpdb._db.command("validate", snpdb._config["MAPSNPS_COLL"], full=True)
+    snpdb._db.command("validate", snpdb._config["SNPS_COLL"], full=True)
     # map_size = _MAPS + _MAPSNPS + _SNPS
     map_size = snpdb._db.command(
         "collstats",
@@ -1006,6 +1066,10 @@ for i in range(N):
                          report=False)
     t = time.time() - t
     results[experiment_id][size_id]['sample']['time'].append(t)
+    # Validating Statistics
+    snpdb._db.command("validate", snpdb._config["SAMPLES_COLL"], full=True)
+    snpdb._db.command("validate", snpdb._config["SNPBLOCKS_COLL"], full=True)
+    snpdb._db.command("validate", snpdb._config["INDIVIDUALS_COLL"], full=True)
     # sample_size = _SAMPLES + _SNPBLOCKS + _INDS
     sample_size = snpdb._db.command(
         "collstats",
@@ -1059,6 +1123,9 @@ for i in range(N):
         t = time.time()
         snpdb.insert_file(file=fqf, individual_id="IND1")
         t = time.time() - t
+        # Validating Statistics
+        snpdb._db.command("validate", "fs.chunks", full=True)
+        snpdb._db.command("validate", "fs.files", full=True)
         file_size = snpdb._db.command("collstats", "fs.chunks")["storageSize"]
         # file_size = snpdb._db["fs.files"].find_one()["length"]
         print("Imported sequencing file\tTime: " + str(round(t, 3)) +
@@ -1108,6 +1175,9 @@ for i in range(N):
         t = time.time()
         snpdb.insert_file(file=imf, individual_id="IND1")
         t = time.time() - t
+        # Validating Statistics
+        snpdb._db.command("validate", "fs.chunks", full=True)
+        snpdb._db.command("validate", "fs.files", full=True)
         file_size = snpdb._db.command("collstats", "fs.chunks")["storageSize"]
         # file_size = snpdb._db["fs.files"].find_one()["length"]
         print("Imported media file\tTime: " + str(round(t, 3)) + "s\tSize:" +
