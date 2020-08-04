@@ -1,2 +1,6 @@
 *.swp
 *__pycache__*
+data/
+.vscode/
+*.zip
+ssh_server/*
