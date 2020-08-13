@@ -3,14 +3,13 @@ load("config.js");
 
 /* Creates an object {key1: value1, key2: value2...}
 to be passed to MongoDB functions. */
-function keyValueObject(key1, value1, ...args)
-{
-	if (args.length%2 == 1)
+function keyValueObject(key1, value1, ...args) {
+	if (args.length % 2 == 1)
 		throw new Error("Even number of arguments required.");
 	obj = {};
 	obj[key1] = value1;
 	for (let i = 0; i < args.length; i += 2)
-		obj[args[i]] = args[i+1];
+		obj[args[i]] = args[i + 1];
 	return obj;
 }
 
@@ -31,10 +30,10 @@ db[config.INDIVIDUALS_COLL].createIndex(keyValueObject(config.INDIVIDUALS_SAMPLE
 db.createCollection(config.MAPS_COLL);
 
 db.createCollection(config.MAPSNPS_COLL);
-db[config.MAPSNPS_COLL].createIndex(keyValueObject(config.MAPSNPS_MAP_ATTR, 1, config.MAPSNPS_IDX_ATTR, 1), unique=true)
+db[config.MAPSNPS_COLL].createIndex(keyValueObject(config.MAPSNPS_MAP_ATTR, 1, config.MAPSNPS_IDX_ATTR, 1), unique = true)
 
 db.createCollection(config.SAMPLES_COLL)
-db[config.SAMPLES_COLL].createIndex(keyValueObject(config.SAMPLES_MAP_ATTR, 1, config.SAMPLES_ID_ATTR, 1), unique=true)
+db[config.SAMPLES_COLL].createIndex(keyValueObject(config.SAMPLES_MAP_ATTR, 1, config.SAMPLES_ID_ATTR, 1), unique = true)
 db[config.SAMPLES_COLL].createIndex(keyValueObject(config.SAMPLES_ID_ATTR, 1))
 
 db.createCollection(config.SNPBLOCKS_COLL);
