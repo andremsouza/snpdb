@@ -42,6 +42,10 @@ def reset_db():
     importlib.reload(snpdb)
 
 
+def generate_file():
+    pass
+
+
 # %% [markdown]
 #  ## 1 - Tempo de importação e espaço ocupado a partir da base zerada
 #  A partir da base zerada, importar um arquivo de amostra e mapa de um animal
@@ -1373,9 +1377,9 @@ for i in range(N):
     snpdb._db.command("validate", "fs.files", full=True)
 
     # Appending experiment results
-    fsize: int = sum([os.stat(i).st_size for i in mfnames.keys()] +
-                     [os.stat(i).st_size for i in pfnames.keys()] +
-                     [os.stat(i).st_size for i in ifnames.keys()] + [
+    fsize: int = sum([os.stat(mfnames[i]).st_size for i in mfnames.keys()] +
+                     [os.stat(pfnames[i]).st_size for i in pfnames.keys()] +
+                     [os.stat(ifnames[i]).st_size for i in ifnames.keys()] + [
                          os.stat(frfname).st_size,
                          os.stat(vcffname).st_size,
                          os.stat(fqfname).st_size,
