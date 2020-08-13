@@ -1456,7 +1456,7 @@ print("Starting Experiment " + experiment_id + " (" + size_id +
 
 # Map and sample sizes
 start_map = 1  # starting snp id
-nsnps = 100000  # number of snps in map
+nsnps = 1000000  # number of snps in map
 start_sample = 1  # starting sample id
 nsamples = 1  # number of samples in file # ! Definir número de amostras
 t = 0  # timing variable
