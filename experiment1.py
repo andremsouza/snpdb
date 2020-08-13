@@ -15,6 +15,7 @@ import subprocess
 import readers
 import testing.random_file_generator as rfgen
 import time
+from typing import Callable, Tuple
 # import writers
 
 data_dir: str = './data/'  # Data output directory
@@ -32,7 +33,7 @@ print('Directory:', fastq_dir_2, '\n', os.listdir(fastq_dir_2), '\n')
 
 
 # %%
-def reset_db():
+def reset_db() -> None:
     """Reset MongoDB database for experiments."""
     snpdb._client.drop_database(snpdb._config["DB_NAME"])
     subprocess.run("""mongo --eval "load('./mongo_setup.js')" """,
@@ -42,8 +43,45 @@ def reset_db():
     importlib.reload(snpdb)
 
 
-def generate_file():
-    pass
+def generate_random_file(filename: str,
+                         file_type: str,
+                         verbose: bool = False,
+                         **kwargs) -> Tuple[float, float]:
+    """Generates random files for snpdb experiments
+
+    Args:
+        filename (str): File name or path for output.
+        file_type (str): Type of file to be generated. Must be in the
+            following values:
+            '0125_map', '0125_samples', 'final_report', 'vcf', 'plink_map',
+            'plink_samples', 'id_mapping'.
+        verbose (bool, optional): If True, prints timing and size information
+            about the generated file. Defaults to False.
+        **kwargs (Any): Keyword arguments for file generation function.
+            'outfile' may be omitted.
+
+    Returns:
+        Tuple[float, float]: Returns the function generation time, and its
+            size on disk
+    """
+    func: Callable = {
+        '0125_map': rfgen.random_0125_map,
+        '0125_samples': rfgen.random_0125_samples,
+        'final_report': rfgen.random_final_report,
+        'vcf': rfgen.random_vcf,
+        'plink_map': rfgen.random_plink_map,
+        'plink_samples': rfgen.random_plink_samples,
+        'id_mapping': rfgen.id_mapping
+    }[file_type]
+    t: float = time.time()
+    with open(filename, 'w') as f:
+        func(outfile=f, **kwargs)
+    t = time.time() - t
+    if verbose:
+        print("Generated " + file_type + "\tTime: " + str(round(t, 3)) +
+              "s\tSize: " +
+              str(round(os.stat(filename).st_size / (1024**2), 2)) + "MB")
+    return t, os.stat(filename).st_size
 
 
 # %% [markdown]
@@ -114,31 +152,25 @@ for i in range(N):
     print("Database reset operation successful.")
     print("Generating input files...")
     # * Generating input files
-    with open(mfname, 'w') as mf, open(pfname, 'w') as pf, open(ifname,
-                                                                'w') as iff:
-        # Map file
-        t = time.time()
-        rfgen.random_0125_map(n=nsnps, outfile=mf, start_from_id=start_map)
-        t = time.time() - t
-        print("Generated map file\tTime: " + str(round(t, 3)) + "s\tSize: " +
-              str(round(os.stat(mfname).st_size / (1024**2), 2)) + "MB")
-        # Sample file
-        t = time.time()
-        rfgen.random_0125_samples(n=nsamples,
-                                  map_size=nsnps,
-                                  outfile=pf,
-                                  start_from_id=start_sample)
-        t = time.time() - t
-        print("Generated samples file\tTime: " + str(round(t, 3)) +
-              "s\tSize: " + str(round(os.stat(pfname).st_size /
-                                      (1024**2), 2)) + "MB")
-        # Id map file
-        t = time.time()
-        rfgen.id_mapping(n=nsamples, outfile=iff, first_sample_id=start_sample)
-        t = time.time() - t
-        print("Generated id mapping file\tTime: " + str(round(t, 3)) +
-              "s\tSize: " + str(round(os.stat(ifname).st_size /
-                                      (1024**2), 2)) + "MB")
+    # Map file
+    generate_random_file(filename=mfname,
+                         file_type='0125_map',
+                         verbose=True,
+                         n=nsnps,
+                         start_from_id=start_map)
+    # Samples file
+    generate_random_file(filename=pfname,
+                         file_type='0125_samples',
+                         verbose=True,
+                         n=nsamples,
+                         map_size=nsnps,
+                         start_from_id=start_sample)
+    # Id map file
+    generate_random_file(filename=ifname,
+                         file_type='id_mapping',
+                         verbose=True,
+                         n=nsamples,
+                         first_sample_id=start_sample)
     # * Inserting input files into db
     print("Inserting input files into database...")
     # Importing map file
@@ -247,31 +279,25 @@ for i in range(N):
     print("Database reset operation successful.")
     print("Generating input files...")
     # * Generating input files
-    with open(mfname, 'w') as mf, open(pfname, 'w') as pf, open(ifname,
-                                                                'w') as iff:
-        # Map file
-        t = time.time()
-        rfgen.random_0125_map(n=nsnps, outfile=mf, start_from_id=start_map)
-        t = time.time() - t
-        print("Generated map file\tTime: " + str(round(t, 3)) + "s\tSize: " +
-              str(round(os.stat(mfname).st_size / (1024**2), 2)) + "MB")
-        # Sample file
-        t = time.time()
-        rfgen.random_0125_samples(n=nsamples,
-                                  map_size=nsnps,
-                                  outfile=pf,
-                                  start_from_id=start_sample)
-        t = time.time() - t
-        print("Generated samples file\tTime: " + str(round(t, 3)) +
-              "s\tSize: " + str(round(os.stat(pfname).st_size /
-                                      (1024**2), 2)) + "MB")
-        # Id map file
-        t = time.time()
-        rfgen.id_mapping(n=nsamples, outfile=iff, first_sample_id=start_sample)
-        t = time.time() - t
-        print("Generated id mapping file\tTime: " + str(round(t, 3)) +
-              "s\tSize: " + str(round(os.stat(ifname).st_size /
-                                      (1024**2), 2)) + "MB")
+    # Map file
+    generate_random_file(filename=mfname,
+                         file_type='0125_map',
+                         verbose=True,
+                         n=nsnps,
+                         start_from_id=start_map)
+    # Samples file
+    generate_random_file(filename=pfname,
+                         file_type='0125_samples',
+                         verbose=True,
+                         n=nsamples,
+                         map_size=nsnps,
+                         start_from_id=start_sample)
+    # Id map file
+    generate_random_file(filename=ifname,
+                         file_type='id_mapping',
+                         verbose=True,
+                         n=nsamples,
+                         first_sample_id=start_sample)
     # * Inserting input files into db
     print("Inserting input files into database...")
     # Importing map file
@@ -385,24 +411,19 @@ for i in range(N):
     print("Database reset operation successful.")
     print("Generating input files...")
     # * Generating input files
-    with open(frfname, 'w') as frf, open(ifname, 'w') as iff:
-        t = time.time()
-        rfgen.random_final_report(n=nsamples,
-                                  map_size=nsnps,
-                                  outfile=frf,
-                                  start_snps_from_id=start_map,
-                                  start_samples_from_id=start_sample)
-        t = time.time() - t
-        print("Generated Final Report file\tTime: " + str(round(t, 3)) +
-              "s\tSize: " + str(round(os.stat(frfname).st_size /
-                                      (1024**2), 2)) + "MB")
-        # Id map file
-        t = time.time()
-        rfgen.id_mapping(n=nsamples, outfile=iff, first_sample_id=start_sample)
-        t = time.time() - t
-        print("Generated id mapping file\tTime: " + str(round(t, 3)) +
-              "s\tSize: " + str(round(os.stat(ifname).st_size /
-                                      (1024**2), 2)) + "MB")
+    generate_random_file(filename=frfname,
+                         file_type='final_report',
+                         verbose=True,
+                         n=nsamples,
+                         map_size=nsnps,
+                         start_snps_from_id=start_map,
+                         start_samples_from_id=start_sample)
+    # Id map file
+    generate_random_file(filename=ifname,
+                         file_type='id_mapping',
+                         verbose=True,
+                         n=nsamples,
+                         first_sample_id=start_sample)
     # * Inserting input files into db
     print("Inserting input files into database...")
     # Importing map file
@@ -505,24 +526,19 @@ for i in range(N):
     print("Database reset operation successful.")
     print("Generating input files...")
     # * Generating input files
-    with open(frfname, 'w') as frf, open(ifname, 'w') as iff:
-        t = time.time()
-        rfgen.random_final_report(n=nsamples,
-                                  map_size=nsnps,
-                                  outfile=frf,
-                                  start_snps_from_id=start_map,
-                                  start_samples_from_id=start_sample)
-        t = time.time() - t
-        print("Generated Final Report file\tTime: " + str(round(t, 3)) +
-              "s\tSize: " + str(round(os.stat(frfname).st_size /
-                                      (1024**2), 2)) + "MB")
-        # Id map file
-        t = time.time()
-        rfgen.id_mapping(n=nsamples, outfile=iff, first_sample_id=start_sample)
-        t = time.time() - t
-        print("Generated id mapping file\tTime: " + str(round(t, 3)) +
-              "s\tSize: " + str(round(os.stat(ifname).st_size /
-                                      (1024**2), 2)) + "MB")
+    generate_random_file(filename=frfname,
+                         file_type='final_report',
+                         verbose=True,
+                         n=nsamples,
+                         map_size=nsnps,
+                         start_snps_from_id=start_map,
+                         start_samples_from_id=start_sample)
+    # Id map file
+    generate_random_file(filename=ifname,
+                         file_type='id_mapping',
+                         verbose=True,
+                         n=nsamples,
+                         first_sample_id=start_sample)
     # * Inserting input files into db
     print("Inserting input files into database...")
     # Importing map file
@@ -632,23 +648,19 @@ for i in range(N):
     print("Database reset operation successful.")
     print("Generating input files...")
     # * Generating input files
-    with open(vcffname, 'w') as vcf, open(ifname, 'w') as iff:
-        t = time.time()
-        rfgen.random_vcf(n=nsamples,
+    generate_random_file(filename=vcffname,
+                         file_type='vcf',
+                         verbose=True,
+                         n=nsamples,
                          map_size=nsnps,
-                         outfile=vcf,
                          start_snps_from_id=start_map,
                          start_samples_from_id=start_sample)
-        t = time.time() - t
-        print("Generated VCF file\tTime: " + str(round(t, 3)) + "s\tSize: " +
-              str(round(os.stat(vcffname).st_size / (1024**2), 2)) + "MB")
-        # Id map file
-        t = time.time()
-        rfgen.id_mapping(n=nsamples, outfile=iff, first_sample_id=start_sample)
-        t = time.time() - t
-        print("Generated id mapping file\tTime: " + str(round(t, 3)) +
-              "s\tSize: " + str(round(os.stat(ifname).st_size /
-                                      (1024**2), 2)) + "MB")
+    # Id map file
+    generate_random_file(filename=ifname,
+                         file_type='id_mapping',
+                         verbose=True,
+                         n=nsamples,
+                         first_sample_id=start_sample)
     # * Inserting input files into db
     print("Inserting input files into database...")
     # Importing map file
@@ -750,23 +762,19 @@ for i in range(N):
     print("Database reset operation successful.")
     print("Generating input files...")
     # * Generating input files
-    with open(vcffname, 'w') as vcf, open(ifname, 'w') as iff:
-        t = time.time()
-        rfgen.random_vcf(n=nsamples,
+    generate_random_file(filename=vcffname,
+                         file_type='vcf',
+                         verbose=True,
+                         n=nsamples,
                          map_size=nsnps,
-                         outfile=vcf,
                          start_snps_from_id=start_map,
                          start_samples_from_id=start_sample)
-        t = time.time() - t
-        print("Generated VCF file\tTime: " + str(round(t, 3)) + "s\tSize: " +
-              str(round(os.stat(vcffname).st_size / (1024**2), 2)) + "MB")
-        # Id map file
-        t = time.time()
-        rfgen.id_mapping(n=nsamples, outfile=iff, first_sample_id=start_sample)
-        t = time.time() - t
-        print("Generated id mapping file\tTime: " + str(round(t, 3)) +
-              "s\tSize: " + str(round(os.stat(ifname).st_size /
-                                      (1024**2), 2)) + "MB")
+    # Id map file
+    generate_random_file(filename=ifname,
+                         file_type='id_mapping',
+                         verbose=True,
+                         n=nsamples,
+                         first_sample_id=start_sample)
     # * Inserting input files into db
     print("Inserting input files into database...")
     # Importing map file
@@ -877,31 +885,25 @@ for i in range(N):
     print("Database reset operation successful.")
     print("Generating input files...")
     # * Generating input files
-    with open(mfname, 'w') as mf, open(pfname, 'w') as pf, open(ifname,
-                                                                'w') as iff:
-        # Map file
-        t = time.time()
-        rfgen.random_plink_map(n=nsnps, outfile=mf, start_from_id=start_map)
-        t = time.time() - t
-        print("Generated map file\tTime: " + str(round(t, 3)) + "s\tSize: " +
-              str(round(os.stat(mfname).st_size / (1024**2), 2)) + "MB")
-        # Sample file
-        t = time.time()
-        rfgen.random_plink_samples(n=nsamples,
-                                   map_size=nsnps,
-                                   outfile=pf,
-                                   start_from_id=start_sample)
-        t = time.time() - t
-        print("Generated samples file\tTime: " + str(round(t, 3)) +
-              "s\tSize: " + str(round(os.stat(pfname).st_size /
-                                      (1024**2), 2)) + "MB")
-        # Id map file
-        t = time.time()
-        rfgen.id_mapping(n=nsamples, outfile=iff, first_sample_id=start_sample)
-        t = time.time() - t
-        print("Generated id mapping file\tTime: " + str(round(t, 3)) +
-              "s\tSize: " + str(round(os.stat(ifname).st_size /
-                                      (1024**2), 2)) + "MB")
+    # Map file
+    generate_random_file(filename=mfname,
+                         file_type='plink_map',
+                         verbose=True,
+                         n=nsnps,
+                         start_from_id=start_map)
+    # Samples file
+    generate_random_file(filename=pfname,
+                         file_type='plink_samples',
+                         verbose=True,
+                         n=nsamples,
+                         map_size=nsnps,
+                         start_from_id=start_sample)
+    # Id map file
+    generate_random_file(filename=ifname,
+                         file_type='id_mapping',
+                         verbose=True,
+                         n=nsamples,
+                         first_sample_id=start_sample)
     # * Inserting input files into db
     print("Inserting input files into database...")
     # Importing map file
@@ -1009,31 +1011,25 @@ for i in range(N):
     print("Database reset operation successful.")
     print("Generating input files...")
     # * Generating input files
-    with open(mfname, 'w') as mf, open(pfname, 'w') as pf, open(ifname,
-                                                                'w') as iff:
-        # Map file
-        t = time.time()
-        rfgen.random_plink_map(n=nsnps, outfile=mf, start_from_id=start_map)
-        t = time.time() - t
-        print("Generated map file\tTime: " + str(round(t, 3)) + "s\tSize: " +
-              str(round(os.stat(mfname).st_size / (1024**2), 2)) + "MB")
-        # Sample file
-        t = time.time()
-        rfgen.random_plink_samples(n=nsamples,
-                                   map_size=nsnps,
-                                   outfile=pf,
-                                   start_from_id=start_sample)
-        t = time.time() - t
-        print("Generated samples file\tTime: " + str(round(t, 3)) +
-              "s\tSize: " + str(round(os.stat(pfname).st_size /
-                                      (1024**2), 2)) + "MB")
-        # Id map file
-        t = time.time()
-        rfgen.id_mapping(n=nsamples, outfile=iff, first_sample_id=start_sample)
-        t = time.time() - t
-        print("Generated id mapping file\tTime: " + str(round(t, 3)) +
-              "s\tSize: " + str(round(os.stat(ifname).st_size /
-                                      (1024**2), 2)) + "MB")
+    # Map file
+    generate_random_file(filename=mfname,
+                         file_type='plink_map',
+                         verbose=True,
+                         n=nsnps,
+                         start_from_id=start_map)
+    # Samples file
+    generate_random_file(filename=pfname,
+                         file_type='plink_samples',
+                         verbose=True,
+                         n=nsamples,
+                         map_size=nsnps,
+                         start_from_id=start_sample)
+    # Id map file
+    generate_random_file(filename=ifname,
+                         file_type='id_mapping',
+                         verbose=True,
+                         n=nsamples,
+                         first_sample_id=start_sample)
     # * Inserting input files into db
     print("Inserting input files into database...")
     # Importing map file
@@ -1198,7 +1194,6 @@ for i in range(N):
 # %% [markdown]
 # ## 1.G - Todos os arquivos de A a F
 # Separando experimentos com 100k SNPs e 1m de SNPs
-# Utilizando arquivos gerados nos experimentos A a F
 
 # %%
 experiment_id = '1.G'
@@ -1206,7 +1201,6 @@ results[experiment_id] = {}
 
 # %% [markdown]
 # ### 100k SNPs
-# WIP
 
 # %%
 size_id = '100k'
@@ -1217,10 +1211,10 @@ print("Starting Experiment " + experiment_id + " (" + size_id +
       " SNPs) with N = " + str(N))
 
 # Map and sample sizes
-# start_map = 1  # starting snp id
-# nsnps = 100000  # number of snps in map
-# start_sample = 1  # starting sample id
-# nsamples = 1  # number of samples in file # ! Definir número de amostras
+start_map = 1  # starting snp id
+nsnps = 100000  # number of snps in map
+start_sample = 1  # starting sample id
+nsamples = 1  # number of samples in file # ! Definir número de amostras
 t = 0  # timing variable
 t_tmp: float = 0  # temporary timing variable
 
@@ -1256,6 +1250,64 @@ for i in range(N):
     print("Resetting database...")
     reset_db()
     print("Database reset operation successful.")
+    # * Generating input files
+    generate_random_file(filename=mfnames['Z125'],
+                         file_type='0125_map',
+                         verbose=True,
+                         n=nsnps,
+                         start_from_id=start_map)
+    generate_random_file(filename=pfnames['Z125'],
+                         file_type='0125_samples',
+                         verbose=True,
+                         n=nsamples,
+                         map_size=nsnps,
+                         start_from_id=start_sample)
+    generate_random_file(filename=ifnames['Z125'],
+                         file_type='id_mapping',
+                         verbose=True,
+                         n=nsamples,
+                         first_sample_id=start_sample)
+    generate_random_file(filename=frfname,
+                         file_type='final_report',
+                         verbose=True,
+                         n=nsamples,
+                         map_size=nsnps,
+                         start_snps_from_id=start_map,
+                         start_samples_from_id=start_sample)
+    generate_random_file(filename=ifnames['FR'],
+                         file_type='id_mapping',
+                         verbose=True,
+                         n=nsamples,
+                         first_sample_id=start_sample)
+    generate_random_file(filename=vcffname,
+                         file_type='vcf',
+                         verbose=True,
+                         n=nsamples,
+                         map_size=nsnps,
+                         start_snps_from_id=start_map,
+                         start_samples_from_id=start_sample)
+    # Id map file
+    generate_random_file(filename=ifnames['VCF'],
+                         file_type='id_mapping',
+                         verbose=True,
+                         n=nsamples,
+                         first_sample_id=start_sample)
+    generate_random_file(filename=mfnames['PL'],
+                         file_type='plink_map',
+                         verbose=True,
+                         n=nsnps,
+                         start_from_id=start_map)
+    generate_random_file(filename=pfnames['PL'],
+                         file_type='plink_samples',
+                         verbose=True,
+                         n=nsamples,
+                         map_size=nsnps,
+                         start_from_id=start_sample)
+    generate_random_file(filename=ifnames['PL'],
+                         file_type='id_mapping',
+                         verbose=True,
+                         n=nsamples,
+                         first_sample_id=start_sample)
     # * Inserting input files into db
     print("Inserting input files into database...")
     # * Z125 Files
@@ -1393,7 +1445,6 @@ for i in range(N):
 
 # %% [markdown]
 # ### 1m SNPs
-# WIP
 
 # %%
 size_id = '1m'
@@ -1404,10 +1455,10 @@ print("Starting Experiment " + experiment_id + " (" + size_id +
       " SNPs) with N = " + str(N))
 
 # Map and sample sizes
-# start_map = 1  # starting snp id
-# nsnps = 100000  # number of snps in map
-# start_sample = 1  # starting sample id
-# nsamples = 1  # number of samples in file # ! Definir número de amostras
+start_map = 1  # starting snp id
+nsnps = 100000  # number of snps in map
+start_sample = 1  # starting sample id
+nsamples = 1  # number of samples in file # ! Definir número de amostras
 t = 0  # timing variable
 t_tmp = 0  # temporary timing variable
 
@@ -1443,6 +1494,64 @@ for i in range(N):
     print("Resetting database...")
     reset_db()
     print("Database reset operation successful.")
+    # * Generating input files
+    generate_random_file(filename=mfnames['Z125'],
+                         file_type='0125_map',
+                         verbose=True,
+                         n=nsnps,
+                         start_from_id=start_map)
+    generate_random_file(filename=pfnames['Z125'],
+                         file_type='0125_samples',
+                         verbose=True,
+                         n=nsamples,
+                         map_size=nsnps,
+                         start_from_id=start_sample)
+    generate_random_file(filename=ifnames['Z125'],
+                         file_type='id_mapping',
+                         verbose=True,
+                         n=nsamples,
+                         first_sample_id=start_sample)
+    generate_random_file(filename=frfname,
+                         file_type='final_report',
+                         verbose=True,
+                         n=nsamples,
+                         map_size=nsnps,
+                         start_snps_from_id=start_map,
+                         start_samples_from_id=start_sample)
+    generate_random_file(filename=ifnames['FR'],
+                         file_type='id_mapping',
+                         verbose=True,
+                         n=nsamples,
+                         first_sample_id=start_sample)
+    generate_random_file(filename=vcffname,
+                         file_type='vcf',
+                         verbose=True,
+                         n=nsamples,
+                         map_size=nsnps,
+                         start_snps_from_id=start_map,
+                         start_samples_from_id=start_sample)
+    # Id map file
+    generate_random_file(filename=ifnames['VCF'],
+                         file_type='id_mapping',
+                         verbose=True,
+                         n=nsamples,
+                         first_sample_id=start_sample)
+    generate_random_file(filename=mfnames['PL'],
+                         file_type='plink_map',
+                         verbose=True,
+                         n=nsnps,
+                         start_from_id=start_map)
+    generate_random_file(filename=pfnames['PL'],
+                         file_type='plink_samples',
+                         verbose=True,
+                         n=nsamples,
+                         map_size=nsnps,
+                         start_from_id=start_sample)
+    generate_random_file(filename=ifnames['PL'],
+                         file_type='id_mapping',
+                         verbose=True,
+                         n=nsamples,
+                         first_sample_id=start_sample)
     # * Inserting input files into db
     print("Inserting input files into database...")
     # * Z125 Files
