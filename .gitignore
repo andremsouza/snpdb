@@ -4,3 +4,5 @@ data/
 .vscode/
 *.zip
 ssh_server/*
+mongodb_data/*
+.ipynb_checkpoints/*
