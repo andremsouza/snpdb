@@ -1,5 +1,7 @@
 # %% [markdown]
 #  # Experimentos SNPDB
+
+# %% [markdown]
 #  ## Imports e inicialização
 
 # %%
@@ -1102,7 +1104,10 @@ results[experiment_id] = {}
 
 # %%
 # Printing experiment start information
-print("Starting Experiment " + experiment_id + " with N = " + str(N) + " ...")
+print("Starting Experiment " + experiment_id + " with N = " + str(N))
+
+# Selecting file # ! Verify which files to use
+fqfname = fastq_dir_1 + 'SH.71992.AP.01.1.fastq'
 
 # Storing results in a dictionary (saving to a JSON file)
 results[experiment_id]['fsize'] = []  # file size
@@ -1113,13 +1118,11 @@ for i in range(N):
     print("i: " + str(i))
     print("Resetting database...")
     reset_db()
-    # Selecting file # ! Verify which files to use
-    fqfname = fastq_dir_1 + 'SH.71992.AP.01.1.fastq'
+    print(fqfname + "\tSize: " +
+          str(round(os.stat(fqfname).st_size / (1024**2), 2)) + "MB")
     # * Inserting input files into db
     # Importing sequencing file
     with open(fqfname, "rb") as fqf:
-        print(fqfname + "\tSize: " +
-              str(round(os.stat(fqfname).st_size / (1024**2), 2)) + "MB")
         t = time.time()
         snpdb.insert_file(file=fqf, individual_id="IND1")
         t = time.time() - t
@@ -1146,7 +1149,7 @@ results[experiment_id] = {}
 
 # %%
 # Printing experiment start information
-print("Starting Experiment " + experiment_id + " with N = " + str(N) + " ...")
+print("Starting Experiment " + experiment_id + " with N = " + str(N))
 
 im_res = (800, 600)  # Image resolution
 imfname = data_dir + 'out_image.jpg'  # Image filename
@@ -1187,6 +1190,389 @@ for i in range(N):
         results[experiment_id]['fsize'].append(os.stat(imfname).st_size)
         results[experiment_id]['dbsize'].append(file_size)
         results[experiment_id]['time'].append(t)
+
+# %% [markdown]
+# ## 1.G - Todos os arquivos de A a F
+# Separando experimentos com 100k SNPs e 1m de SNPs
+# Utilizando arquivos gerados nos experimentos A a F
+
+# %%
+experiment_id = '1.G'
+results[experiment_id] = {}
+
+# %% [markdown]
+# ### 100k SNPs
+# WIP
+
+# %%
+size_id = '100k'
+
+# %%
+# Printing experiment start information
+print("Starting Experiment " + experiment_id + " (" + size_id +
+      " SNPs) with N = " + str(N))
+
+# Map and sample sizes
+# start_map = 1  # starting snp id
+# nsnps = 100000  # number of snps in map
+# start_sample = 1  # starting sample id
+# nsamples = 1  # number of samples in file # ! Definir número de amostras
+t = 0  # timing variable
+t_tmp: float = 0  # temporary timing variable
+
+# Filenames
+mfnames: dict = {
+    'Z125': data_dir + 'out_' + size_id + '.0125map',
+    'PL': data_dir + 'out_' + size_id + '.plmap'
+}
+pfnames: dict = {
+    'Z125': data_dir + 'out_' + size_id + '.0125ped',
+    'PL': data_dir + 'out_' + size_id + '.plped'
+}
+frfname = data_dir + 'out_' + size_id + '.fr'
+vcffname = data_dir + 'out_' + size_id + '.vcf'
+ifnames: dict = {
+    'Z125': data_dir + 'out_' + size_id + '.0125ids',
+    'FR': data_dir + 'out_' + size_id + '.frids',
+    'VCF': data_dir + 'out_' + size_id + '.vcfids',
+    'PL': data_dir + 'out_' + size_id + '.plids'
+}
+fqfname = fastq_dir_1 + 'SH.71992.AP.01.1.fastq'
+imfname = data_dir + 'out_image.jpg'
+
+# Storing results in a dictionary (saving to a JSON file)
+results[experiment_id][size_id] = {}
+results[experiment_id][size_id]['fsize'] = []  # file size
+results[experiment_id][size_id]['dbsize'] = []  # doc size in db
+results[experiment_id][size_id]['time'] = []  # insertion time
+
+# * Performing experiment N times and storing results
+for i in range(N):
+    print("i: " + str(i))
+    print("Resetting database...")
+    reset_db()
+    print("Database reset operation successful.")
+    # * Inserting input files into db
+    print("Inserting input files into database...")
+    # * Z125 Files
+    # Importing map file
+    t_tmp = time.time()
+    snpdb.import_map(map_reader=readers.Z125MapReader(mfnames['Z125']),
+                     map_name=experiment_id + size_id + 'Z125',
+                     force_create_new=True,
+                     force_use_existing=False,
+                     report=False)
+    t += time.time() - t_tmp
+    # Importing sample file
+    id_map = {}
+    # Linking samples to individuals in the database
+    if ifnames.get('Z125') is not None:
+        with open(ifnames['Z125'], "r") as f:
+            for line in f:
+                (sample, individual) = line.split()
+                id_map[sample] = individual
+    t_tmp = time.time()
+    snpdb.import_samples(sample_reader=readers.Z125SampleReader(
+        pfnames['Z125']),
+                         map_name=experiment_id + size_id + 'Z125',
+                         id_map=id_map,
+                         report=False)
+    t += time.time() - t_tmp
+    # * FR Files
+    # Importing map file
+    t_tmp = time.time()
+    snpdb.import_map(map_reader=readers.FinalReportMapReader(frfname),
+                     map_name=experiment_id + size_id + 'FR',
+                     force_create_new=True,
+                     force_use_existing=False,
+                     report=False)
+    t += time.time() - t_tmp
+    # Importing sample file
+    id_map = {}
+    # Linking samples to individuals in the database
+    if ifnames.get('FR') is not None:
+        with open(ifnames['FR'], "r") as f:
+            for line in f:
+                (sample, individual) = line.split()
+                id_map[sample] = individual
+    t_tmp = time.time()
+    snpdb.import_samples(
+        sample_reader=readers.FinalReportSampleReader(frfname),
+        map_name=experiment_id + size_id + 'FR',
+        id_map=id_map,
+        report=False)
+    t += time.time() - t_tmp
+    # * VCF Files
+    # Importing map file
+    t_tmp = time.time()
+    snpdb.import_map(map_reader=readers.VcfMapReader(vcffname),
+                     map_name=experiment_id + size_id + 'VCF',
+                     force_create_new=True,
+                     force_use_existing=False,
+                     report=False)
+    t += time.time() - t_tmp
+    # Importing sample file
+    id_map = {}
+    # Linking samples to individuals in the database
+    if ifnames.get('VCF') is not None:
+        with open(ifnames['VCF'], "r") as f:
+            for line in f:
+                (sample, individual) = line.split()
+                id_map[sample] = individual
+    t_tmp = time.time()
+    snpdb.import_samples(sample_reader=readers.VcfSampleReader(vcffname),
+                         map_name=experiment_id + size_id + 'VCF',
+                         id_map=id_map,
+                         report=False)
+    t += time.time() - t_tmp
+    # * PLink Files
+    # Importing map file
+    t_tmp = time.time()
+    snpdb.import_map(map_reader=readers.PlinkMapReader(mfnames['PL']),
+                     map_name=experiment_id + size_id + 'PL',
+                     force_create_new=True,
+                     force_use_existing=False,
+                     report=False)
+    t += time.time() - t_tmp
+    # Importing sample file
+    id_map = {}
+    # Linking samples to individuals in the database
+    if ifnames.get('PL') is not None:
+        with open(ifnames['PL'], "r") as f:
+            for line in f:
+                (sample, individual) = line.split()
+                id_map[sample] = individual
+    t_tmp = time.time()
+    snpdb.import_samples(sample_reader=readers.PlinkSampleReader(
+        pfnames['PL']),
+                         map_name=experiment_id + size_id + 'PL',
+                         id_map=id_map,
+                         report=False)
+    t += time.time() - t_tmp
+    # * FastQ Files
+    # Importing sequencing file
+    with open(fqfname, "rb") as fqf:
+        t_tmp = time.time()
+        snpdb.insert_file(file=fqf, individual_id="IND1")
+        t += time.time() - t_tmp
+    # * Media Files
+    # Importing media file
+    with open(imfname, "rb") as imf:
+        t_tmp = time.time()
+        snpdb.insert_file(file=imf, individual_id="IND1")
+        t += time.time() - t_tmp
+
+    # Validating Statistics
+    snpdb._db.command("validate", snpdb._config["MAPS_COLL"], full=True)
+    snpdb._db.command("validate", snpdb._config["MAPSNPS_COLL"], full=True)
+    snpdb._db.command("validate", snpdb._config["SNPS_COLL"], full=True)
+    snpdb._db.command("validate", snpdb._config["SAMPLES_COLL"], full=True)
+    snpdb._db.command("validate", snpdb._config["SNPBLOCKS_COLL"], full=True)
+    snpdb._db.command("validate", snpdb._config["INDIVIDUALS_COLL"], full=True)
+    snpdb._db.command("validate", "fs.chunks", full=True)
+    snpdb._db.command("validate", "fs.files", full=True)
+
+    # Appending experiment results
+    fsize: int = sum([os.stat(i).st_size for i in mfnames.keys()] +
+                     [os.stat(i).st_size for i in pfnames.keys()] +
+                     [os.stat(i).st_size for i in ifnames.keys()] + [
+                         os.stat(frfname).st_size,
+                         os.stat(vcffname).st_size,
+                         os.stat(fqfname).st_size,
+                         os.stat(imfname).st_size
+                     ])
+    dbsize: float = snpdb._db.command("dbStats")["storageSize"]
+
+    results[experiment_id][size_id]['fsize'].append(fsize)
+    results[experiment_id][size_id]['dbsize'].append(dbsize)
+    results[experiment_id][size_id]['time'].append(t)
+
+# %% [markdown]
+# ### 1m SNPs
+# WIP
+
+# %%
+size_id = '1m'
+
+# %%
+# Printing experiment start information
+print("Starting Experiment " + experiment_id + " (" + size_id +
+      " SNPs) with N = " + str(N))
+
+# Map and sample sizes
+# start_map = 1  # starting snp id
+# nsnps = 100000  # number of snps in map
+# start_sample = 1  # starting sample id
+# nsamples = 1  # number of samples in file # ! Definir número de amostras
+t = 0  # timing variable
+t_tmp = 0  # temporary timing variable
+
+# Filenames
+mfnames = {
+    'Z125': data_dir + 'out_' + size_id + '.0125map',
+    'PL': data_dir + 'out_' + size_id + '.plmap'
+}
+pfnames = {
+    'Z125': data_dir + 'out_' + size_id + '.0125ped',
+    'PL': data_dir + 'out_' + size_id + '.plped'
+}
+frfname = data_dir + 'out_' + size_id + '.fr'
+vcffname = data_dir + 'out_' + size_id + '.vcf'
+ifnames = {
+    'Z125': data_dir + 'out_' + size_id + '.0125ids',
+    'FR': data_dir + 'out_' + size_id + '.frids',
+    'VCF': data_dir + 'out_' + size_id + '.vcfids',
+    'PL': data_dir + 'out_' + size_id + '.plids'
+}
+fqfname = fastq_dir_1 + 'SH.71992.AP.01.1.fastq'
+imfname = data_dir + 'out_image.jpg'
+
+# Storing results in a dictionary (saving to a JSON file)
+results[experiment_id][size_id] = {}
+results[experiment_id][size_id]['fsize'] = []  # file size
+results[experiment_id][size_id]['dbsize'] = []  # doc size in db
+results[experiment_id][size_id]['time'] = []  # insertion time
+
+# * Performing experiment N times and storing results
+for i in range(N):
+    print("i: " + str(i))
+    print("Resetting database...")
+    reset_db()
+    print("Database reset operation successful.")
+    # * Inserting input files into db
+    print("Inserting input files into database...")
+    # * Z125 Files
+    # Importing map file
+    t_tmp = time.time()
+    snpdb.import_map(map_reader=readers.Z125MapReader(mfnames['Z125']),
+                     map_name=experiment_id + size_id + 'Z125',
+                     force_create_new=True,
+                     force_use_existing=False,
+                     report=False)
+    t += time.time() - t_tmp
+    # Importing sample file
+    id_map = {}
+    # Linking samples to individuals in the database
+    if ifnames.get('Z125') is not None:
+        with open(ifnames['Z125'], "r") as f:
+            for line in f:
+                (sample, individual) = line.split()
+                id_map[sample] = individual
+    t_tmp = time.time()
+    snpdb.import_samples(sample_reader=readers.Z125SampleReader(
+        pfnames['Z125']),
+                         map_name=experiment_id + size_id + 'Z125',
+                         id_map=id_map,
+                         report=False)
+    t += time.time() - t_tmp
+    # * FR Files
+    # Importing map file
+    t_tmp = time.time()
+    snpdb.import_map(map_reader=readers.FinalReportMapReader(frfname),
+                     map_name=experiment_id + size_id + 'FR',
+                     force_create_new=True,
+                     force_use_existing=False,
+                     report=False)
+    t += time.time() - t_tmp
+    # Importing sample file
+    id_map = {}
+    # Linking samples to individuals in the database
+    if ifnames.get('FR') is not None:
+        with open(ifnames['FR'], "r") as f:
+            for line in f:
+                (sample, individual) = line.split()
+                id_map[sample] = individual
+    t_tmp = time.time()
+    snpdb.import_samples(
+        sample_reader=readers.FinalReportSampleReader(frfname),
+        map_name=experiment_id + size_id + 'FR',
+        id_map=id_map,
+        report=False)
+    t += time.time() - t_tmp
+    # * VCF Files
+    # Importing map file
+    t_tmp = time.time()
+    snpdb.import_map(map_reader=readers.VcfMapReader(vcffname),
+                     map_name=experiment_id + size_id + 'VCF',
+                     force_create_new=True,
+                     force_use_existing=False,
+                     report=False)
+    t += time.time() - t_tmp
+    # Importing sample file
+    id_map = {}
+    # Linking samples to individuals in the database
+    if ifnames.get('VCF') is not None:
+        with open(ifnames['VCF'], "r") as f:
+            for line in f:
+                (sample, individual) = line.split()
+                id_map[sample] = individual
+    t_tmp = time.time()
+    snpdb.import_samples(sample_reader=readers.VcfSampleReader(vcffname),
+                         map_name=experiment_id + size_id + 'VCF',
+                         id_map=id_map,
+                         report=False)
+    t += time.time() - t_tmp
+    # * PLink Files
+    # Importing map file
+    t_tmp = time.time()
+    snpdb.import_map(map_reader=readers.PlinkMapReader(mfnames['PL']),
+                     map_name=experiment_id + size_id + 'PL',
+                     force_create_new=True,
+                     force_use_existing=False,
+                     report=False)
+    t += time.time() - t_tmp
+    # Importing sample file
+    id_map = {}
+    # Linking samples to individuals in the database
+    if ifnames.get('PL') is not None:
+        with open(ifnames['PL'], "r") as f:
+            for line in f:
+                (sample, individual) = line.split()
+                id_map[sample] = individual
+    t_tmp = time.time()
+    snpdb.import_samples(sample_reader=readers.PlinkSampleReader(
+        pfnames['PL']),
+                         map_name=experiment_id + size_id + 'PL',
+                         id_map=id_map,
+                         report=False)
+    t += time.time() - t_tmp
+    # * FastQ Files
+    # Importing sequencing file
+    with open(fqfname, "rb") as fqf:
+        t_tmp = time.time()
+        snpdb.insert_file(file=fqf, individual_id="IND1")
+        t += time.time() - t_tmp
+    # * Media Files
+    # Importing media file
+    with open(imfname, "rb") as imf:
+        t_tmp = time.time()
+        snpdb.insert_file(file=imf, individual_id="IND1")
+        t += time.time() - t_tmp
+
+    # Validating Statistics
+    snpdb._db.command("validate", snpdb._config["MAPS_COLL"], full=True)
+    snpdb._db.command("validate", snpdb._config["MAPSNPS_COLL"], full=True)
+    snpdb._db.command("validate", snpdb._config["SNPS_COLL"], full=True)
+    snpdb._db.command("validate", snpdb._config["SAMPLES_COLL"], full=True)
+    snpdb._db.command("validate", snpdb._config["SNPBLOCKS_COLL"], full=True)
+    snpdb._db.command("validate", snpdb._config["INDIVIDUALS_COLL"], full=True)
+    snpdb._db.command("validate", "fs.chunks", full=True)
+    snpdb._db.command("validate", "fs.files", full=True)
+
+    # Appending experiment results
+    fsize = sum([os.stat(mfnames[i]).st_size for i in mfnames.keys()] +
+                [os.stat(pfnames[i]).st_size for i in pfnames.keys()] +
+                [os.stat(ifnames[i]).st_size for i in ifnames.keys()] + [
+                    os.stat(frfname).st_size,
+                    os.stat(vcffname).st_size,
+                    os.stat(fqfname).st_size,
+                    os.stat(imfname).st_size
+                ])
+    dbsize = snpdb._db.command("dbStats")["storageSize"]
+
+    results[experiment_id][size_id]['fsize'].append(fsize)
+    results[experiment_id][size_id]['dbsize'].append(dbsize)
+    results[experiment_id][size_id]['time'].append(t)
 
 # %% [markdown]
 # # Saving results
