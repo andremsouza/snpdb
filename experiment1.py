@@ -767,6 +767,7 @@ results[experiment_id] = {}
 
 fqfname = fastq_dir_1 + 'SH.71992.AP.01.1.fastq'
 imfname = data_dir + 'out_image.jpg'
+im_res = (800, 600)
 
 for nsnps in nspns_list:
     size_id = {100000: '100k', 1000000: '1m'}[nsnps]
