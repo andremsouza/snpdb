@@ -760,7 +760,6 @@ for i in range(N):
 
 # %% [markdown]
 # ## 1.G - Todos os arquivos de A a F
-# Separando experimentos com 100k SNPs e 1m de SNPs
 
 # %%
 experiment_id = '1.G'
@@ -870,6 +869,9 @@ for nsnps in nspns_list:
                                  verbose=True,
                                  n=nsamples)
             #  first_sample_id=start_sample)
+            im_arr = np.random.rand(im_res[0], im_res[1], 3) * 255
+            im_out = Image.fromarray(im_arr.astype('uint8')).convert('RGB')
+            im_out.save(imfname)
             # * Inserting input files into db
             print("Inserting input files into database...")
             # * Z125 Files
