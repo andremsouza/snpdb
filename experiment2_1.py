@@ -7,9 +7,7 @@
 # %%
 import importlib
 import json
-import numpy as np
 import os
-from PIL import Image
 import snpdb
 import subprocess
 import readers
@@ -94,9 +92,10 @@ def generate_random_file(filename: str,
 # - 1000000
 
 # %%
-N: int = 10  # Performing experiments with N loops
+N: int = 1  # Performing experiments with N loops
 results: dict = {}  # Storing results in a dictionary
-nspns_list: list = [100000, 1000000]
+# nspns_list: list = [100000, 1000000]
+nsnps_list: list = [100000]
 nsamples_list: list = [10, 100, 1000, 10000, 100000, 1000000]
 
 # %% [markdown]
@@ -118,10 +117,10 @@ nsamples_list: list = [10, 100, 1000, 10000, 100000, 1000000]
 experiment_id: str = '2.1.A'
 results[experiment_id] = {}
 
-for nsnps in nspns_list:
-    size_id: str = {100000: '100k', 1000000: '1m'}[nsnps]
+for nsnps in nsnps_list:
+    size_id = {100000: '100k', 1000000: '1m'}[nsnps]
     for nsamples in nsamples_list:
-        count_id: str = {
+        count_id = {
             10: '10',
             100: '100',
             1000: '1k',
@@ -135,12 +134,12 @@ for nsnps in nspns_list:
 
         # start_map: int = 1  # starting snp id
         # start_sample: int = 1  # starting sample id
-        t: float = 0  # timing variable
+        t: float = 0.0  # timing variable
 
         # Filenames
-        mfname: str = data_dir + 'out_' + size_id + '_' + count_id + '.0125map'
-        pfname: str = data_dir + 'out_' + size_id + '_' + count_id + '.0125ped'
-        ifname: str = data_dir + 'out_' + size_id + '_' + count_id + '.0125ids'
+        mfname = data_dir + 'out_' + size_id + '_' + count_id + '.0125map'
+        pfname = data_dir + 'out_' + size_id + '_' + count_id + '.0125ped'
+        ifname = data_dir + 'out_' + size_id + '_' + count_id + '.0125ids'
 
         # Storing results in a dictionary (saving to a JSON file)
         results[experiment_id][size_id] = {}
@@ -164,27 +163,6 @@ for nsnps in nspns_list:
             print("Resetting database...")
             reset_db()
             print("Database reset operation successful.")
-            print("Generating input files...")
-            # * Generating input files
-            # Map file
-            generate_random_file(filename=mfname,
-                                 file_type='0125_map',
-                                 verbose=True,
-                                 n=nsnps)
-            #  start_from_id=start_map)
-            # Samples file
-            generate_random_file(filename=pfname,
-                                 file_type='0125_samples',
-                                 verbose=True,
-                                 n=nsamples,
-                                 map_size=nsnps)
-            #  start_from_id=start_sample)
-            # Id map file
-            generate_random_file(filename=ifname,
-                                 file_type='id_mapping',
-                                 verbose=True,
-                                 n=nsamples)
-            #  first_sample_id=start_sample)
             # * Inserting input files into db
             print("Inserting input files into database...")
             # Importing map file
@@ -274,7 +252,7 @@ for nsnps in nspns_list:
 experiment_id = '2.1.B'
 results[experiment_id] = {}
 
-for nsnps in nspns_list:
+for nsnps in nsnps_list:
     size_id = {100000: '100k', 1000000: '1m'}[nsnps]
     for nsamples in nsamples_list:
         count_id = {
@@ -319,21 +297,6 @@ for nsnps in nspns_list:
             print("Resetting database...")
             reset_db()
             print("Database reset operation successful.")
-            print("Generating input files...")
-            # * Generating input files
-            generate_random_file(filename=vcffname,
-                                 file_type='vcf',
-                                 verbose=True,
-                                 n=nsamples,
-                                 map_size=nsnps)
-            #  start_snps_from_id=start_map,
-            #  start_samples_from_id=start_sample)
-            # Id map file
-            generate_random_file(filename=ifname,
-                                 file_type='id_mapping',
-                                 verbose=True,
-                                 n=nsamples)
-            #  first_sample_id=start_sample)
             # * Inserting input files into db
             print("Inserting input files into database...")
             # Importing map file
@@ -423,7 +386,7 @@ fqfname: str = fastq_dir_1 + 'SH.71992.AP.01.1.fastq'
 imfname: str = data_dir + 'out_image.jpg'
 im_res: tuple = (800, 600)
 
-for nsnps in nspns_list:
+for nsnps in nsnps_list:
     size_id = {100000: '100k', 1000000: '1m'}[nsnps]
     for nsamples in nsamples_list:
         count_id = {
@@ -446,20 +409,20 @@ for nsnps in nspns_list:
 
         # Filenames
         mfnames: dict = {
-            'Z125': data_dir + 'out_' + size_id + '.0125map',
-            'PL': data_dir + 'out_' + size_id + '.plmap'
+            'Z125': data_dir + 'out_' + size_id + '_' + count_id + '.0125map',
+            'PL': data_dir + 'out_' + size_id + '_' + count_id + '.plmap'
         }
         pfnames: dict = {
-            'Z125': data_dir + 'out_' + size_id + '.0125ped',
-            'PL': data_dir + 'out_' + size_id + '.plped'
+            'Z125': data_dir + 'out_' + size_id + '_' + count_id + '.0125ped',
+            'PL': data_dir + 'out_' + size_id + '_' + count_id + '.plped'
         }
-        frfname = data_dir + 'out_' + size_id + '.fr'
-        vcffname = data_dir + 'out_' + size_id + '.vcf'
+        frfname = data_dir + 'out_' + size_id + '_' + count_id + '.fr'
+        vcffname = data_dir + 'out_' + size_id + '_' + count_id + '.vcf'
         ifnames: dict = {
-            'Z125': data_dir + 'out_' + size_id + '.0125ids',
-            'FR': data_dir + 'out_' + size_id + '.frids',
-            'VCF': data_dir + 'out_' + size_id + '.vcfids',
-            'PL': data_dir + 'out_' + size_id + '.plids'
+            'Z125': data_dir + 'out_' + size_id + '_' + count_id + '.0125ids',
+            'FR': data_dir + 'out_' + size_id + '_' + count_id + '.frids',
+            'VCF': data_dir + 'out_' + size_id + '_' + count_id + '.vcfids',
+            'PL': data_dir + 'out_' + size_id + '_' + count_id + '.plids'
         }
 
         # Storing results in a dictionary (saving to a JSON file)
@@ -475,67 +438,6 @@ for nsnps in nspns_list:
             print("Resetting database...")
             reset_db()
             print("Database reset operation successful.")
-            # * Generating input files
-            generate_random_file(filename=mfnames['Z125'],
-                                 file_type='0125_map',
-                                 verbose=True,
-                                 n=nsnps)
-            #  start_from_id=start_map)
-            generate_random_file(filename=pfnames['Z125'],
-                                 file_type='0125_samples',
-                                 verbose=True,
-                                 n=nsamples,
-                                 map_size=nsnps)
-            #  start_from_id=start_sample)
-            generate_random_file(filename=ifnames['Z125'],
-                                 file_type='id_mapping',
-                                 verbose=True,
-                                 n=nsamples)
-            #  first_sample_id=start_sample)
-            generate_random_file(filename=frfname,
-                                 file_type='final_report',
-                                 verbose=True,
-                                 n=nsamples,
-                                 map_size=nsnps)
-            #  start_snps_from_id=start_map,
-            #  start_samples_from_id=start_sample)
-            generate_random_file(filename=ifnames['FR'],
-                                 file_type='id_mapping',
-                                 verbose=True,
-                                 n=nsamples)
-            #  first_sample_id=start_sample)
-            generate_random_file(filename=vcffname,
-                                 file_type='vcf',
-                                 verbose=True,
-                                 n=nsamples,
-                                 map_size=nsnps)
-            #  start_snps_from_id=start_map,
-            #  start_samples_from_id=start_sample)
-            # Id map file
-            generate_random_file(filename=ifnames['VCF'],
-                                 file_type='id_mapping',
-                                 verbose=True,
-                                 n=nsamples)
-            #  first_sample_id=start_sample)
-            generate_random_file(filename=mfnames['PL'],
-                                 file_type='plink_map',
-                                 verbose=True,
-                                 n=nsnps)
-            #  start_from_id=start_map)
-            generate_random_file(filename=pfnames['PL'],
-                                 file_type='plink_samples',
-                                 verbose=True,
-                                 n=nsamples,
-                                 map_size=nsnps)
-            #  start_from_id=start_sample)
-            generate_random_file(filename=ifnames['PL'],
-                                 file_type='id_mapping',
-                                 verbose=True,
-                                 n=nsamples)
-            #  first_sample_id=start_sample)
-            im_arr = np.random.rand(im_res[0], im_res[1], 3) * 255
-            im_out = Image.fromarray(im_arr.astype('uint8')).convert('RGB')
-            im_out.save(imfname)
             # * Inserting input files into db
             print("Inserting input files into database...")
             # * Z125 Files
@@ -686,30 +588,10 @@ for nsnps in nspns_list:
             results[experiment_id][size_id][count_id]['time'].append(t)
 
 # %% [markdown]
-# # Saving results
-
-# %% [markdown]
-# ## 2.6 - Remoção de todos os dados armazenados de um indivíduo
-# Deverão ser implementadas funções para remoção de indivíduos específicos.
-
-# %%
-# TODO: Deletion function for snpdb
-
-# %% [markdown]
-# ## 2.7 - Comparação de importação e exportação de dados no modo “bruto”
-# Deseja-se importar e exportar dados no modo “bruto”, e comparar a
-# performance dessas operações com as usuais, utilizando funções
-# pré-existentes. Inicialmente, deseja-se utilizar para este experimento um
-# arquivo 0125 de 1GB.
-
-# %%
-# TODO: Generate 1GB 0125 file for experiment
-
-# %% [markdown]
 # # Armazenando resultados
 
 # %%
 # Saving results to a JSON file
-jfname = data_dir + 'exp2results.json'
+jfname = data_dir + 'exp2_1results.json'
 with open(jfname, 'w') as jf:
     json.dump(results, jf)
