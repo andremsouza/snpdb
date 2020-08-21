@@ -105,9 +105,7 @@ nsamples_list: list = [10, 100, 1000, 10000, 100000, 1000000]
 # arquivo 0125 de 1GB.
 
 # %%
-# TODO: Generate 1GB 0125 file for experiment (100kSNPs/10k individuals)
-
-# %%
+# ? Using 1GB 0125 file for experiment (100kSNPs/10k individuals)
 experiment_id = '2.7'
 results[experiment_id] = {}
 
@@ -162,27 +160,6 @@ for nsnps in [100000]:  # ! Verify snp count
             print("Resetting database...")
             reset_db()
             print("Database reset operation successful.")
-            print("Generating input files...")
-            # * Generating input files
-            # Map file
-            generate_random_file(filename=mfname,
-                                 file_type='0125_map',
-                                 verbose=True,
-                                 n=nsnps)
-            #  start_from_id=start_map)
-            # Samples file
-            generate_random_file(filename=pfname,
-                                 file_type='0125_samples',
-                                 verbose=True,
-                                 n=nsamples,
-                                 map_size=nsnps)
-            #  start_from_id=start_sample)
-            # Id map file
-            generate_random_file(filename=ifname,
-                                 file_type='id_mapping',
-                                 verbose=True,
-                                 n=nsamples)
-            #  first_sample_id=start_sample)
             # * Inserting input files into db
             print("Inserting input files into database...")
             # Importing map file
