@@ -32,8 +32,8 @@ void RandomFinalReport(string file_name, int n, int map_size,
             << alleles[rd() % 4] << "\t" << alleles[rd() % 4] << "\t"
             << alleles[rd() % 4] << "\t" << alleles[rd() % 4] << "\t"
             << ab[rd() % 2] << "\t" << ab[rd() % 2] << "\t" << setprecision(4)
-            << RandomDeviceDouble(0.0, 1.0) << setprecision(3)
-            << RandomDeviceDouble(0.0, 1.0) << setprecision(3)
+            << RandomDeviceDouble(0.0, 1.0) << "\t" << setprecision(3)
+            << RandomDeviceDouble(0.0, 1.0) << "\t" << setprecision(3)
             << RandomDeviceDouble(0.0, 1.0) << "\n";
   }
 
@@ -60,8 +60,15 @@ int main(int argc, char const *argv[]) {
   if (argc > 4) start_snps_from_id = atoi(argv[4]);
   if (argc > 5) start_samples_from_id = atoi(argv[5]);
 
+  cout << "Generating Final Report File (" << file_name << "): " << n
+       << " samples, " << map_size << "SNPs" << endl;
+
   RandomFinalReport(file_name, n, map_size, start_snps_from_id,
                     start_samples_from_id);
+  auto file_size =
+      ifstream(file_name, ifstream::ate | ifstream::binary).tellg();
+  cout << "Generated Final Report File: " << (double)file_size / (1024 * 1024)
+       << "MB" << endl;
 
   return 0;
 }
