@@ -465,6 +465,7 @@ for nsnps in nsnps_list:
                                  report=False)
             t += time.time() - t_tmp
             # * FR Files
+            # ! Falta gerar um arquivo FR (100k SNPs, 1m samples)
             # Importing map file
             t_tmp = time.time()
             snpdb.import_map(map_reader=readers.FinalReportMapReader(frfname),
