@@ -269,6 +269,29 @@ def execute_experiment_two_files(result: dict) -> None:
                              verbose=True,
                              n=nsnps)
         #  start_from_id=start_map)
+        # Importing map file
+        t_tmp = time.time()
+        snpdb.import_map(
+            map_reader=exps[experiment_id]['readers']['map'](mfname),
+            map_name=experiment_id + '_' + nsnps_id + '_' + nsamples_id,
+            force_create_new=True,
+            force_use_existing=False,
+            report=False)
+        t_tmp = time.time() - t_tmp
+        t_map += t_tmp
+        # Validating statistics
+        snpdb._db.command("validate", snpdb._config["MAPS_COLL"], full=True)
+        snpdb._db.command("validate", snpdb._config["MAPSNPS_COLL"], full=True)
+        snpdb._db.command("validate", snpdb._config["SNPS_COLL"], full=True)
+        # map_size = _MAPS + _MAPSNPS + _SNPS
+        map_size = snpdb._db.command(
+            "collstats",
+            snpdb._config["MAPS_COLL"])['storageSize'] + snpdb._db.command(
+                "collstats", snpdb.
+                _config["MAPSNPS_COLL"])['storageSize'] + snpdb._db.command(
+                    "collstats", snpdb._config["SNPS_COLL"])['storageSize']
+        print("Imported map file\tTime: " + str(round(t_map, 3)) + "s\tSize:" +
+              str(round(map_size / 1024**2, 2)) + "MB")
         for i in range(n_blocks):
             print("Block: " + str(i))
             nsamples_block = int(np.minimum(remaining_samples, 10000.0))
@@ -287,37 +310,7 @@ def execute_experiment_two_files(result: dict) -> None:
                                  first_sample_id=start_sample)
             start_sample += nsamples_block
             remaining_samples -= nsamples_block
-            # * Inserting input files into db
-            print("Inserting input files into database...")
-            # Importing map file
-            t_tmp = time.time()
-            snpdb.import_map(
-                map_reader=exps[experiment_id]['readers']['map'](mfname),
-                map_name=experiment_id + '_' + nsnps_id + '_' + nsamples_id,
-                force_create_new=True,
-                force_use_existing=False,
-                report=False)
-            t_tmp = time.time() - t_tmp
-            t_map += t_tmp
-            # Validating statistics
-            snpdb._db.command("validate",
-                              snpdb._config["MAPS_COLL"],
-                              full=True)
-            snpdb._db.command("validate",
-                              snpdb._config["MAPSNPS_COLL"],
-                              full=True)
-            snpdb._db.command("validate",
-                              snpdb._config["SNPS_COLL"],
-                              full=True)
-            # map_size = _MAPS + _MAPSNPS + _SNPS
-            map_size += snpdb._db.command(
-                "collstats",
-                snpdb._config["MAPS_COLL"])['storageSize'] + snpdb._db.command(
-                    "collstats", snpdb._config["MAPSNPS_COLL"]
-                )['storageSize'] + snpdb._db.command(
-                    "collstats", snpdb._config["SNPS_COLL"])['storageSize']
-            print("Imported map file\tTime: " + str(round(t_map, 3)) +
-                  "s\tSize:" + str(round(map_size / 1024**2, 2)) + "MB")
+
             # Importing sample file
             id_map: dict = {}
             # Linking samples to individuals in the database
@@ -334,25 +327,23 @@ def execute_experiment_two_files(result: dict) -> None:
                 report=False)
             t_tmp = time.time() - t_tmp
             t_sample += t_tmp
-            # Validating Statistics
-            snpdb._db.command("validate",
-                              snpdb._config["SAMPLES_COLL"],
-                              full=True)
-            snpdb._db.command("validate",
-                              snpdb._config["SNPBLOCKS_COLL"],
-                              full=True)
-            snpdb._db.command("validate",
-                              snpdb._config["INDIVIDUALS_COLL"],
-                              full=True)
-            # sample_size = _SAMPLES + _SNPBLOCKS + _INDS
-            sample_size += snpdb._db.command(
-                "collstats", snpdb._config["SAMPLES_COLL"]
-            )['storageSize'] + snpdb._db.command(
+        # Validating Statistics
+        snpdb._db.command("validate", snpdb._config["SAMPLES_COLL"], full=True)
+        snpdb._db.command("validate",
+                          snpdb._config["SNPBLOCKS_COLL"],
+                          full=True)
+        snpdb._db.command("validate",
+                          snpdb._config["INDIVIDUALS_COLL"],
+                          full=True)
+        # sample_size = _SAMPLES + _SNPBLOCKS + _INDS
+        sample_size = snpdb._db.command(
+            "collstats",
+            snpdb._config["SAMPLES_COLL"])['storageSize'] + snpdb._db.command(
                 "collstats", snpdb._config["SNPBLOCKS_COLL"]
             )['storageSize'] + snpdb._db.command(
                 "collstats", snpdb._config["INDIVIDUALS_COLL"])['storageSize']
-            print("Imported samples file\tTime: " + str(round(t_sample, 3)) +
-                  "s\tSize:" + str(round(sample_size / 1024**2, 2)) + "MB")
+        print("Imported samples file\tTime: " + str(round(t_sample, 3)) +
+              "s\tSize:" + str(round(sample_size / 1024**2, 2)) + "MB")
 
         # Appending generated file sizes
         result['fsize'].append(
@@ -457,6 +448,7 @@ def execute_experiment_one_file(result: dict) -> None:
         n_blocks = int(np.ceil(nsamples / 10000))
         remaining_samples = nsamples
         start_sample = 1
+        imported_map = False
         #  start_from_id=start_map)
         for i in range(n_blocks):
             print("Block: " + str(i))
@@ -478,35 +470,38 @@ def execute_experiment_one_file(result: dict) -> None:
             remaining_samples -= nsamples_block
             # * Inserting input files into db
             print("Inserting input files into database...")
-            # Importing map file
-            t_tmp = time.time()
-            snpdb.import_map(
-                map_reader=exps[experiment_id]['readers']['map'](fname),
-                map_name=experiment_id + '_' + nsnps_id + '_' + nsamples_id,
-                force_create_new=True,
-                force_use_existing=False,
-                report=False)
-            t_tmp = time.time() - t_tmp
-            t_map += t_tmp
-            # Validating statistics
-            snpdb._db.command("validate",
-                              snpdb._config["MAPS_COLL"],
-                              full=True)
-            snpdb._db.command("validate",
-                              snpdb._config["MAPSNPS_COLL"],
-                              full=True)
-            snpdb._db.command("validate",
-                              snpdb._config["SNPS_COLL"],
-                              full=True)
-            # map_size = _MAPS + _MAPSNPS + _SNPS
-            map_size += snpdb._db.command(
-                "collstats",
-                snpdb._config["MAPS_COLL"])['storageSize'] + snpdb._db.command(
+            if not imported_map:
+                imported_map = True
+                # Importing map file
+                t_tmp = time.time()
+                snpdb.import_map(
+                    map_reader=exps[experiment_id]['readers']['map'](fname),
+                    map_name=experiment_id + '_' + nsnps_id + '_' +
+                    nsamples_id,
+                    force_create_new=True,
+                    force_use_existing=False,
+                    report=False)
+                t_tmp = time.time() - t_tmp
+                t_map += t_tmp
+                # Validating statistics
+                snpdb._db.command("validate",
+                                  snpdb._config["MAPS_COLL"],
+                                  full=True)
+                snpdb._db.command("validate",
+                                  snpdb._config["MAPSNPS_COLL"],
+                                  full=True)
+                snpdb._db.command("validate",
+                                  snpdb._config["SNPS_COLL"],
+                                  full=True)
+                # map_size = _MAPS + _MAPSNPS + _SNPS
+                map_size = snpdb._db.command(
+                    "collstats", snpdb._config["MAPS_COLL"]
+                )['storageSize'] + snpdb._db.command(
                     "collstats", snpdb._config["MAPSNPS_COLL"]
                 )['storageSize'] + snpdb._db.command(
                     "collstats", snpdb._config["SNPS_COLL"])['storageSize']
-            print("Imported map file\tTime: " + str(round(t_map, 3)) +
-                  "s\tSize:" + str(round(map_size / 1024**2, 2)) + "MB")
+                print("Imported map file\tTime: " + str(round(t_map, 3)) +
+                      "s\tSize:" + str(round(map_size / 1024**2, 2)) + "MB")
             # Importing sample file
             id_map: dict = {}
             # Linking samples to individuals in the database
@@ -523,25 +518,23 @@ def execute_experiment_one_file(result: dict) -> None:
                 report=False)
             t_tmp = time.time() - t_tmp
             t_sample += t_tmp
-            # Validating Statistics
-            snpdb._db.command("validate",
-                              snpdb._config["SAMPLES_COLL"],
-                              full=True)
-            snpdb._db.command("validate",
-                              snpdb._config["SNPBLOCKS_COLL"],
-                              full=True)
-            snpdb._db.command("validate",
-                              snpdb._config["INDIVIDUALS_COLL"],
-                              full=True)
-            # sample_size = _SAMPLES + _SNPBLOCKS + _INDS
-            sample_size += snpdb._db.command(
-                "collstats", snpdb._config["SAMPLES_COLL"]
-            )['storageSize'] + snpdb._db.command(
+        # Validating Statistics
+        snpdb._db.command("validate", snpdb._config["SAMPLES_COLL"], full=True)
+        snpdb._db.command("validate",
+                          snpdb._config["SNPBLOCKS_COLL"],
+                          full=True)
+        snpdb._db.command("validate",
+                          snpdb._config["INDIVIDUALS_COLL"],
+                          full=True)
+        # sample_size = _SAMPLES + _SNPBLOCKS + _INDS
+        sample_size = snpdb._db.command(
+            "collstats",
+            snpdb._config["SAMPLES_COLL"])['storageSize'] + snpdb._db.command(
                 "collstats", snpdb._config["SNPBLOCKS_COLL"]
             )['storageSize'] + snpdb._db.command(
                 "collstats", snpdb._config["INDIVIDUALS_COLL"])['storageSize']
-            print("Imported samples file\tTime: " + str(round(t_sample, 3)) +
-                  "s\tSize:" + str(round(sample_size / 1024**2, 2)) + "MB")
+        print("Imported samples file\tTime: " + str(round(t_sample, 3)) +
+              "s\tSize:" + str(round(sample_size / 1024**2, 2)) + "MB")
 
         # Appending generated file sizes
         result['fsize'].append(float(os.stat(fname).st_size))
