@@ -10,6 +10,7 @@ from pymongo import MongoClient, UpdateOne
 from gridfs import GridFS
 import json
 import os
+from typing import Union
 
 
 class MapReader(ABC):
@@ -41,7 +42,7 @@ class MapReader(ABC):
 
     def __init__(self, map_file):
         """Initializes the class to in order extract SNPs from given file.
-        
+
         Attributes
         ----------
         map_file   Path to the file containg map data to be read.
@@ -51,13 +52,13 @@ class MapReader(ABC):
     @abstractmethod
     def __iter__(self):
         """Returns an iterator that reads and extracts SNPs from _MAP_FILE.
-        
+
         Abstract method. Must return an iterator which reads the file
         located in _MAP_FILE and, for each iteration, returns a dict instance
         containing a SNP's information under the appropriate keys, whose name
         are stored on the SNP_* attrs. It's ideal, though not mandatory, that
         the SNPs are returned in the same order they appear in the file.
-        
+
         For best performance, the iterator should be a generator that
         yields SNPs while scanning the file progressively without loading it
         entirely into memory.
@@ -67,9 +68,9 @@ class MapReader(ABC):
     @abstractmethod
     def __len__(self):
         """Returns the number of SNPs contained in _MAP_FILE.
-        
+
         Abstract method. Must return number of readable SNPs from _MAP_FILE.
-        
+
         For best performance, it should read _MAP_FILE once on first call
         then store the SNP count. On subsequent calls, just return the count.
         """
@@ -78,7 +79,7 @@ class MapReader(ABC):
     @abstractmethod
     def map_meta(self):
         """Returns a dict containing map metadata for _MAP_FILE.
-        
+
         The only key with special significance is the one whose name
         is contained in MAP_FORMAT. It should contain an identifier
         of the file format.
@@ -92,7 +93,7 @@ class SampleReader(ABC):
     Classes derived from this one are used by import_samples in order to
     import a sample/ped file's data to the database. The  __iter__ method
     should return an iterator which, for each iteration, returns a dict
-    instance containing sample information under the appropriate keys, 
+    instance containing sample information under the appropriate keys,
     whose name are stored on the attributes below (other keys will be ignored).
     There should be no need to alter the values of such attributes.
 
@@ -102,7 +103,7 @@ class SampleReader(ABC):
                         within the file.
     SAMPLE_GENOTYPE     The key which will contain the sample's genotype data
                         (see below).
-    
+
     The sample's genotype data itself should be a dict. It should contain
     one or more arrays with the genotype data. The length M of each array
     should be the same as the size of the associated map/panel.
@@ -115,7 +116,7 @@ class SampleReader(ABC):
 
     def __init__(self, ped_file):
         """Initializes the class to in order extract samples from given file.
-        
+
         Attributes
         ----------
         ped_file   Path to the file containg sample data to be read.
@@ -125,12 +126,12 @@ class SampleReader(ABC):
     @abstractmethod
     def __iter__(self):
         """Returns an iterator that reads and extracts samples from _PED_FILE.
-        
+
         Abstract method. Must return an iterator which reads the file
         located in _PED_FILE and, for each iteration, returns a dict instance
-        containing a sample's information under the appropriate keys, whose name
-        are stored on the SAMPLE_* attrs.
-        
+        containing a sample's information under the appropriate keys, whose
+        names are stored on the SAMPLE_* attrs.
+
         For best performance, the iterator should be a generator that
         yields samples while scanning the file progressively without loading it
         entirely into memory.
@@ -140,33 +141,33 @@ class SampleReader(ABC):
     @abstractmethod
     def __len__(self):
         """Returns the number of samples contained in _PED_FILE.
-        
+
         Abstract method. Must return number of readable samples from
         _PED_FILE.
-        
-        For best performance, it should read _PED_FILE once on first call
-        then store the sample count. On subsequent calls, just return the count.
+
+        For best performance, it should read _PED_FILE once on first call then
+        store the sample count. On subsequent calls, just return the count.
         """
         pass
 
 
 class MapWriter(ABC):
     """Base class for implementing a map/panel writer for a file format.
-    
+
     Classes derived from this one are used by export_map in order to
     write a map data from the database to a file. The class
     expects data of the maps SNPs, received through __init__. The write method
     takes this data and writes to a file following the appropriate format
     rules. SNP data consists of a list of dictionaries, one for each SNP,
     following the same rules as MapReader.
-    
+
     Attributes
     ----------
-    
+
     SNP_NAME    The dict key which will contain the SNP's name.
     SNP_CHROM   The dict key which will contain the SNP's chromosome.
     SNP_POS     The dict key which will contain the SNP's position.
-    
+
     Any keys imported by a MapReader will also be available here.
     """
 
@@ -176,17 +177,18 @@ class MapWriter(ABC):
 
     def __init__(self, snps):
         """Initializes the writer with the appropriate SNP data.
-        
+
         Attributes
         ----------
-        snps    list (or any iterable) of dicts, each one representing a SNP to be exported.
+        snps    list (or any iterable) of dicts, each one representing a SNP
+                to be exported.
         """
         self._snps = snps
 
     @abstractmethod
     def write(self, out_file_path):
         """Write received SNP data to file, preserving order. Abstract method.
-        
+
         Attributes
         ----------
         out_file_path   Absolute or relative path of the output file.
@@ -196,17 +198,17 @@ class MapWriter(ABC):
 
 class SampleWriter(ABC):
     """Base class for implementing a sample writer for a file format.
-    
+
     Classes derived from this one are used by export_samples in order to
     write sample/ped data from the database to a file. The class
     expects to receive data of the samples received through __init__.
-    The write method takes this data and writes to a file following the appropriate
-    format rules. The data received is a list of dictionaries, each one representing
-    a sample, following the same rules as SampleReader.
-    
+    The write method takes this data and writes to a file following the
+    appropriate format rules. The data received is a list of dictionaries,
+    each one representing a sample, following the same rules as SampleReader.
+
     Attributes
     ----------
-    
+
     SAMPLE_ID           The dict key which will contain the sample's
                         within file id.
     SAMPLE_GENOTYPE     The dict key which will contain the sample's
@@ -218,17 +220,18 @@ class SampleWriter(ABC):
 
     def __init__(self, samples):
         """Initializes the writer with the appropriate sample data.
-        
+
         Attributes
         ----------
-        samples    list (or any iterable) of dicts, each one representing a sample to be exported.
+        samples     list (or any iterable) of dicts, each one representing a
+                    sample to be exported.
         """
         self._samples = samples
 
     @abstractmethod
     def write(self, out_file_path):
-        """Write received sample data to file, preserving order. Abstract method.
-        
+        """Write sample data to file, preserving order. Abstract method.
+
         Attributes
         ----------
         out_file_path   Absolute or relative path of the output file.
@@ -238,13 +241,13 @@ class SampleWriter(ABC):
 
 def read_config(path="config.js"):
     """Load configuration file and return its contents.
-    
+
     The configuration file a JSON file, except that it begins with an
     assignment: config = {JSON...}
     This is so it can also be used by mongo_setup.js, which runs on the
     MongoDB shell.
     Returns a dict with the contents of the JSON.
-    
+
     Attributes
     ----------
     path="config.js"    Path to the configuration file.
@@ -277,6 +280,56 @@ _MAPSNPS = _db[_config["MAPSNPS_COLL"]]
 _GFS = GridFS(_db)
 
 
+def delete_individuals(id=None,
+                       tatoo=None,
+                       sample_map=None,
+                       sample_id=None) -> list:
+    """Searches and deletes all data from individuals in the database.
+
+    Returns a list with the status of the delete operations.
+
+    Parameters
+    ----------
+    id=None             Match only the individual with given internal id.
+    tatoo=None          Match only individuals which contain tatoo among
+                        their alternate IDs.
+    sample_map=None     Match only individuals that have data on the specified
+                        map.
+    sample_id=None      Match only individuals that have the specified sample
+                        id under some map.
+    """
+    result: list = []
+    individuals: list = find_individuals(id, tatoo, sample_map, sample_id)
+    samples = [
+        (s[_config["SAMPLES_MAP_ATTR"]], s[_config["SAMPLES_ID_ATTR"]])
+        for ss in
+        [ind[_config["INDIVIDUALS_SAMPLE_LIST_ATTR"]] for ind in individuals]
+        for s in ss
+    ]
+    if len(individuals):
+        query_snpblocks: dict = {
+            "$or": [{
+                _config["SNPBLOCKS_MAP_ATTR"]: map_name,
+                _config["SNPBLOCKS_SAMPLE_ATTR"]: sample_id
+            } for map_name, sample_id in samples]
+        }
+        query_samples: dict = {
+            "$or": [{
+                _config["SAMPLES_MAP_ATTR"]: map_name,
+                _config["SAMPLES_ID_ATTR"]: sample_id
+            } for map_name, sample_id in samples]
+        }
+        query_individuals: dict = {
+            "$or": [{
+                "_id": ind["_id"]
+            } for ind in individuals]
+        }
+        result.append(_SNPBLOCKS.delete_many(query_snpblocks))
+        result.append(_SAMPLES.delete_many(query_samples))
+        result.append(_INDS.delete_many(query_individuals))
+    return result
+
+
 def find_snp(
     id=None,
     min_chrom=None,
@@ -298,7 +351,7 @@ def find_snp(
                      or equal to the one given.
     max_chrom=None   Match only SNPs with a chromosome that compares lesser
                      or equal to the one given.
-    min_pos=None     Match only SNPs with a position value that compares 
+    min_pos=None     Match only SNPs with a position value that compares
                      greater or equal than the one given.
     max_pos=None     Match only SNPs with a position value that compares
                      smaller or equal than the one given.
@@ -372,8 +425,7 @@ def find_maps(id=None, min_size=None, max_size=None, format=None):
                 _config["MAPS_SIZE_ATTR"]: 1,
                 _config["MAPS_BLOCK_SIZE_ATTR"]: 1,
             },
-        )
-    )
+        ))
 
 
 def get_map_snps(id):
@@ -386,9 +438,8 @@ def get_map_snps(id):
     ----------
     id      The map's id.
     """
-    cur = _MAPSNPS.find(
-        {_config["MAPSNPS_MAP_ATTR"]: id}, sort=[(_config["MAPSNPS_IDX_ATTR"], 1)]
-    )
+    cur = _MAPSNPS.find({_config["MAPSNPS_MAP_ATTR"]: id},
+                        sort=[(_config["MAPSNPS_IDX_ATTR"], 1)])
     snps, ssnps = [], []
     for doc in cur:
         snps.extend(doc[_config["MAPSNPS_LIST_ATTR"]])
@@ -406,8 +457,8 @@ def find_individuals(id=None, tatoo=None, sample_map=None, sample_id=None):
     id=None             Match only the individual with given internal id.
     tatoo=None          Match only individuals which contain tatoo among
                         their alternate IDs.
-    sample_map=None     Match only individuals that have data on the specified map.
-    sample_id=None      Match only individuals that have the specified sample id
+    sample_map=None     Match only individuals that have data on specified map.
+    sample_id=None      Match only individuals that have the specified sample
                         under some map.
     """
     query = {}
@@ -416,16 +467,74 @@ def find_individuals(id=None, tatoo=None, sample_map=None, sample_id=None):
     if tatoo is not None:
         query.update({_config["INDIVIDUALS_ID_LIST_ATTR"]: tatoo})
     if sample_map is not None:
-        attr = (
-            _config["INDIVIDUALS_SAMPLE_LIST_ATTR"] + "." + _config["SAMPLES_MAP_ATTR"]
-        )
+        attr = (_config["INDIVIDUALS_SAMPLE_LIST_ATTR"] + "." +
+                _config["SAMPLES_MAP_ATTR"])
         query.update({attr: sample_map})
     if sample_id is not None:
-        attr = (
-            _config["INDIVIDUALS_SAMPLE_LIST_ATTR"] + "." + _config["SAMPLES_ID_ATTR"]
-        )
+        attr = (_config["INDIVIDUALS_SAMPLE_LIST_ATTR"] + "." +
+                _config["SAMPLES_ID_ATTR"])
         query.update({attr: sample_id})
     return list(_INDS.find(query))
+
+
+def find_individuals_of_snps(
+    id=None,
+    min_chrom=None,
+    max_chrom=None,
+    min_pos=None,
+    max_pos=None,
+    map=None,
+    iid=None,
+    chr=None,
+) -> list:
+    """Search individuals in the database, using a list of SNPs.
+
+    Returns a list of dicts, one for each individual in the result.
+
+    Parameters
+    ----------
+    id=None          Match only SNPs with given name.
+    min_chrom=None   Match only SNPs with a chromosome that compares greater
+                     or equal to the one given.
+    max_chrom=None   Match only SNPs with a chromosome that compares lesser
+                     or equal to the one given.
+    min_pos=None     Match only SNPs with a position value that compares
+                     greater or equal than the one given.
+    max_pos=None     Match only SNPs with a position value that compares
+                     smaller or equal than the one given.
+    map=None         Match only SNPs that are contained within the map given.
+    iid=None         Match only the SNP with the given internal numeric id.
+    chr=None         Match only the SNPs with the given chromosome.
+    """
+    snps = find_snp(id, min_chrom, max_chrom, min_pos, max_pos, map, iid, chr)
+    # _SNPS -> _MAPS -> _SAMPLES -> _INDS
+    # Find maps of given SNPs
+    maps: list = list(
+        set([
+            map for maps in [snp[_config["SNPS_MAPS_ATTR"]] for snp in snps]
+            for map in maps
+        ]))
+    # Find samples of associated maps
+    if len(maps) == 0:
+        return []  # No associated maps -> no associated individuals
+    query_samples: dict = {
+        "$or": [{
+            _config["SAMPLES_MAP_ATTR"]: map
+        } for map in maps]
+    }
+    samples: list = _SAMPLES.find(query_samples)
+    # Find individuals of associated samples
+    map_attr: str = str(_config["INDIVIDUALS_SAMPLE_LIST_ATTR"] + "." +
+                        _config["SAMPLES_MAP_ATTR"])
+    id_attr: str = str(_config["INDIVIDUALS_SAMPLE_LIST_ATTR"] + "." +
+                       _config["SAMPLES_ID_ATTR"])
+    query_individuals: dict = {
+        "$or": [{
+            map_attr: sample["map"],
+            id_attr: sample["id"]
+        } for sample in samples]
+    }
+    return list(_INDS.find(query_individuals))
 
 
 def find_snp_of_sample(mapname, sample, snp_id):
@@ -447,10 +556,16 @@ def find_snp_of_sample(mapname, sample, snp_id):
     try:
         map = find_maps(id=mapname)[0]
         pipeline = [
-            {"$match": {MAP: mapname}},
+            {
+                "$match": {
+                    MAP: mapname
+                }
+            },
             {
                 "$project": {
-                    "idx": {"$indexOfArray": ["$" + SORTED_SNPS, snp_id]},
+                    "idx": {
+                        "$indexOfArray": ["$" + SORTED_SNPS, snp_id]
+                    },
                     IDX: 1,
                 }
             },
@@ -462,13 +577,11 @@ def find_snp_of_sample(mapname, sample, snp_id):
                 pos = index % map[BLOCK_SIZE]
                 break
 
-        block = _SNPBLOCKS.find_one(
-            {
-                _config["SNPBLOCKS_MAP_ATTR"]: mapname,
-                _config["SNPBLOCKS_BLOCK_NUMBER"]: blk,
-                _config["SNPBLOCKS_SAMPLE_ATTR"]: sample,
-            }
-        )
+        block = _SNPBLOCKS.find_one({
+            _config["SNPBLOCKS_MAP_ATTR"]: mapname,
+            _config["SNPBLOCKS_BLOCK_NUMBER"]: blk,
+            _config["SNPBLOCKS_SAMPLE_ATTR"]: sample,
+        })
 
     except (IndexError, ValueError, UnboundLocalError):
         return None
@@ -502,7 +615,7 @@ def find_sample(id=None, map=None):
 
 def get_sample_data(id, map):
     """Retrive sample data.
-       
+
        The data is returned as a dict, following the same format produced by
        the SampleWriter used to import it.
 
@@ -516,7 +629,7 @@ def get_sample_data(id, map):
         raise Exception("Homonymous samples within the same map.")
     if len(samples) == 0:
         return None
-    sample = samples[0]
+    # sample = samples[0]
 
     maps = find_maps(id=map)
     if len(maps) == 0:
@@ -529,9 +642,11 @@ def get_sample_data(id, map):
     SNPBLOCKS_MAP = _config["SNPBLOCKS_MAP_ATTR"]
     SNPBLOCKS_SAMPLE = _config["SNPBLOCKS_SAMPLE_ATTR"]
     SNPBLOCKS_NO = _config["SNPBLOCKS_BLOCK_NUMBER"]
-    blocks = _SNPBLOCKS.find(
-        {SNPBLOCKS_MAP: map, SNPBLOCKS_SAMPLE: id}, sort=[(SNPBLOCKS_NO, 1)]
-    )
+    blocks = _SNPBLOCKS.find({
+        SNPBLOCKS_MAP: map,
+        SNPBLOCKS_SAMPLE: id
+    },
+                             sort=[(SNPBLOCKS_NO, 1)])
     genotype = {}
     for block in blocks:
         g = block[_config["SNPBLOCKS_GENOTYPE"]]
@@ -558,44 +673,52 @@ def get_sample_data(id, map):
     return genotype
 
 
-def insert_file(file, individual_id=None):
+def insert_file(file, **kwargs):
     """Upload a file to the database, optionally linking it to an individual.
 
     Parameters
     ----------
     file                    File-like object to import
-    individual_id=None      Identifier of the individual associated with the
+    **kwargs                (optional) Metadata below may be passed as kwargs
+    individual_id           Identifier of the individual associated with the
                             the file. It has no special meaning, except for the
                             summarize method, which considers that a file is
-                            associated with an individual iif this value is 
-                            is equal to its internal id.
+                            associated with an individual iif this value is
+                            equal to its internal id.
+    file_type               Type of inserted file (FastQ, Image, etc)
+    description             Description of the inserted file
     """
-    if individual_id is None:
-        _GFS.put(file, filename=os.path.basename(file.name))
-    else:
-        _GFS.put(
-            file,
-            filename=os.path.basename(file.name),
-            **{_config["FILES_INDIVIDUAL_ATTR"]: individual_id},
-        )
+    _GFS.put(file, filename=os.path.basename(file.name), metadata=kwargs)
 
 
-def list_files(individual_id=None, name=None):
+def list_files(**kwargs):
     """Search files in the database.
-    
+
     Returns a list of dicts, each one containing metadata from
     a file.
 
     Parameters
     ----------
-    individual_id=None      Match only files with the specified individual_id.
-    name=None               Match only files with the specified original name.
+    **kwargs                (optional) Metadata below may be passed as kwargs
+    individual_id           Match only files with the specified individual_id.
+    filename                Match only files with the specified filename
+    file_type               Match only files with the specified file type.
+    description             Match only files with the specified description.
     """
+    # Dictionary to match arguments with config file constants
+    dictionary = {
+        "filename": _config["FILES_FILENAME"],
+        "individual_id": "metadata." + _config["FILES_INDIVIDUAL_ATTR"],
+        "file_type": "metadata." + _config["FILES_TYPE"],
+        "description": "metadata." + _config["FILES_DESCRIPTION"]
+    }
+    # Building query
     query = {}
-    if individual_id is not None:
-        query.update({_config["FILES_INDIVIDUAL_ATTR"]: individual_id})
-    if name is not None:
-        query.update({"filename": name})
+    try:
+        query = {dictionary[k]: kwargs[k] for k in kwargs}
+    except KeyError as e:
+        print("Warning: invalid keyword argument:", e)
+        print("Expected kwargs:", dictionary.keys)
 
     return list(_db.fs.files.find(query, {"chunkSize": 0}))
 
@@ -621,9 +744,11 @@ def get_files(files):
             f.write(grid_out.read())
 
 
-def import_map(
-    map_reader, map_name, force_create_new=False, force_use_existing=False, report=False
-):
+def import_map(map_reader,
+               map_name,
+               force_create_new=False,
+               force_use_existing=False,
+               report=False):
     """Import map into the database using a MapReader.
 
     Parameters
@@ -636,10 +761,10 @@ def import_map(
                                 If at least one is found, the user is asked
                                 to choose between creating a new SNP or using
                                 one of the similars found.
-                                SNPs are considered similar if their chromosomes
-                                and positions match exactly. If True, new SNPs
-                                are always created.
-    force_use_existing=False    If True, will always try to use similar 
+                                SNPs are considered similar if their
+                                chromosomes and positions match exactly.
+                                If True, new SNPs are always created.
+    force_use_existing=False    If True, will always try to use similar
                                 (see parameter above) SNPs instead of creating
                                 new ones. If only one similar SNP is found, it
                                 is used automatically. If more than one is
@@ -676,42 +801,36 @@ def import_map(
     BS = _config["MAPSNPS_MAX_LIST_SIZE"]
     snp_list = [x[0] for x in snp_ids]
     s_snp_list = sorted(snp_list)
-    _MAPSNPS.insert_many(
-        (
-            {
-                _config["MAPSNPS_MAP_ATTR"]: map_name,
-                _config["MAPSNPS_IDX_ATTR"]: i,
-                _config["MAPSNPS_LIST_ATTR"]: snp_list[i * BS : i * BS + BS],
-                _config["MAPSNPS_SORTED_LIST_ATTR"]: s_snp_list[i * BS : i * BS + BS],
-            }
-            for i in range(0, (nsnps - 1) // BS + 1)
-        )
-    )
+    _MAPSNPS.insert_many(({
+        _config["MAPSNPS_MAP_ATTR"]:
+        map_name,
+        _config["MAPSNPS_IDX_ATTR"]:
+        i,
+        _config["MAPSNPS_LIST_ATTR"]:
+        snp_list[i * BS:i * BS + BS],
+        _config["MAPSNPS_SORTED_LIST_ATTR"]:
+        s_snp_list[i * BS:i * BS + BS],
+    } for i in range(0, (nsnps - 1) // BS + 1)))
 
     # Insert new SNPs into snps collection.
     new_snps = [
         __adjust_snp(snp, map_reader, snp_ids[i][0])
-        for (i, snp) in enumerate(map_reader)
-        if snp_ids[i][1]
+        for (i, snp) in enumerate(map_reader) if snp_ids[i][1]
     ]
     if len(new_snps) > 0:
         _SNPS.insert_many(new_snps)
 
     # For each SNP (old or new), add the new map to the SNP's map list.
-    _SNPS.bulk_write(
-        [
-            UpdateOne(
-                {"_id": snp_ids[j][0]}, {"$push": {_config["SNPS_MAPS_ATTR"]: map_name}}
-            )
-            for j in range(nsnps)
-        ]
-    )
+    _SNPS.bulk_write([
+        UpdateOne({"_id": snp_ids[j][0]},
+                  {"$push": {
+                      _config["SNPS_MAPS_ATTR"]: map_name
+                  }}) for j in range(nsnps)
+    ])
 
     if report:
-        print(
-            f"Added map {map_name} with {nsnps} SNPs, "
-            + f"{len(new_snps)} new SNPs created."
-        )
+        print(f"Added map {map_name} with {nsnps} SNPs, " +
+              f"{len(new_snps)} new SNPs created.")
 
 
 def import_samples(sample_reader, map_name, id_map={}, report=False):
@@ -766,10 +885,11 @@ def import_samples(sample_reader, map_name, id_map={}, report=False):
         for key in genotype:
             if isinstance(genotype[key], str):
                 genotype[key] = "".join(
-                    [x for _, x in sorted(zip(snps, genotype[key]))]
-                )
+                    [x for _, x in sorted(zip(snps, genotype[key]))])
             else:
-                genotype[key] = [str(x) for _, x in sorted(zip(snps, genotype[key]))]
+                genotype[key] = [
+                    str(x) for _, x in sorted(zip(snps, genotype[key]))
+                ]
 
         # Break genotype into blocks and insert into SNP blocks collection.
         current_block = 0
@@ -777,17 +897,16 @@ def import_samples(sample_reader, map_name, id_map={}, report=False):
             b_genotype = {}
             for key in genotype:
                 if isinstance(genotype[key], str):
-                    b_genotype[key] = genotype[key][i : i + bsize]
+                    b_genotype[key] = genotype[key][i:i + bsize]
                 else:
-                    b_genotype[key] = " " + " ".join(genotype[key][i : i + bsize])
-            _SNPBLOCKS.insert_one(
-                {
-                    _config["SNPBLOCKS_MAP_ATTR"]: map_name,
-                    _config["SNPBLOCKS_SAMPLE_ATTR"]: id,
-                    _config["SNPBLOCKS_BLOCK_NUMBER"]: current_block,
-                    _config["SNPBLOCKS_GENOTYPE"]: b_genotype,
-                }
-            )
+                    b_genotype[key] = " " + " ".join(
+                        genotype[key][i:i + bsize])
+            _SNPBLOCKS.insert_one({
+                _config["SNPBLOCKS_MAP_ATTR"]: map_name,
+                _config["SNPBLOCKS_SAMPLE_ATTR"]: id,
+                _config["SNPBLOCKS_BLOCK_NUMBER"]: current_block,
+                _config["SNPBLOCKS_GENOTYPE"]: b_genotype,
+            })
             new_blocks += 1
             current_block += 1
 
@@ -801,27 +920,28 @@ def import_samples(sample_reader, map_name, id_map={}, report=False):
             elif len(individuals) == 1:
                 option = 1
             if option == 0:
-                _INDS.insert_one(
-                    {
-                        "_id": __next_individual_id(),
-                        _config["INDIVIDUALS_ID_LIST_ATTR"]: [id_map[id]],
-                        _config["INDIVIDUALS_SAMPLE_LIST_ATTR"]: [sample_key],
-                    }
-                )
+                _INDS.insert_one({
+                    "_id":
+                    __next_individual_id(),
+                    _config["INDIVIDUALS_ID_LIST_ATTR"]: [id_map[id]],
+                    _config["INDIVIDUALS_SAMPLE_LIST_ATTR"]: [sample_key],
+                })
                 new_individuals += 1
             else:
                 _INDS.update_one(
                     {"_id": individuals[option - 1]["_id"]},
-                    {"$push": {_config["INDIVIDUALS_SAMPLE_LIST_ATTR"]: sample_key}},
+                    {
+                        "$push": {
+                            _config["INDIVIDUALS_SAMPLE_LIST_ATTR"]: sample_key
+                        }
+                    },
                 )
                 old_individuals += 1
 
     if report:
-        print(
-            f"{new_samples} samples added, {new_blocks} blocks, "
-            + f"{new_individuals} individuals created, "
-            + f"{old_individuals} pre-existing individuals updated."
-        )
+        print(f"{new_samples} samples added, {new_blocks} blocks, " +
+              f"{new_individuals} individuals created, " +
+              f"{old_individuals} pre-existing individuals updated.")
 
 
 def export_map(id, map_writer, out_file_path):
@@ -856,13 +976,13 @@ def export_samples(samples, map, sample_writer, out_file_path):
 
     The samples to be exported should contain all the fields required by
     the specific SampleWriter.
-    
+
     Parameters
     ----------
-    samples         List containing within-map IDs of the samples to be exported.
+    samples         List containing within-map IDs of samples to be exported.
                     If empty, all the samples associated with the map will be
                     exported.
-    map             ID of map with which the samples to be exported are associated.
+    map             ID of map with which samples to be exported are associated.
     sample_writer   A SampleWriter instance.
     out_file_path   Path of file to export to.
     """
@@ -870,7 +990,8 @@ def export_samples(samples, map, sample_writer, out_file_path):
     wsamples = []
     if len(samples) == 0:
         samples = [
-            sample[_config["SAMPLES_ID_ATTR"]] for sample in find_sample(map=map)
+            sample[_config["SAMPLES_ID_ATTR"]]
+            for sample in find_sample(map=map)
         ]
     for id in samples:
         current = {
@@ -885,43 +1006,86 @@ def export_samples(samples, map, sample_writer, out_file_path):
     writer.write(out_file_path)
 
 
-def summarize(individual):
+def summarize(individuals: Union[dict, list]) -> list:
     """Summarizes all data about an individual.
 
-    Returns a dict with the following keys:
-    <map format>:<str,str list>     list of maps the individual is in,
+    Returns a list of dicts with the following keys:
+    <map format>_sample:<str,str list>     list of maps the individual is in,
                                 for that format, with sample ids
-    <map format>_count: <int>   count of maps the individual is in,
+    <map format>_sample_count: <int>   count of maps the individual is in,
                                 for that format
+    <map format>_snps_count: <int> count of snps of individual, for that format
     files: <str list>           list of file names associated with
                                 the individual
-    files_count: <int>          count of files associated with the
+    <file type>_file_count: <int>          count of files associated with the
                                 individual
-    
+
     Parameters
     ----------
-    individual      dict representing an individual, as
-                    returned by find_individuals
+    individual      dict or list of dicts representing an individual, as
+                    returned by find_individuals or find_individuals_of_snps
     """
+    result: list = []
+    # Check if individuals is a dict or a list. Return accordingly
+    if isinstance(individuals, dict):
+        individuals = [individuals]
 
-    result = {"files": [], "files_count": 0}
-    for s in individual[_config["INDIVIDUALS_SAMPLE_LIST_ATTR"]]:
-        map_name = s[_config["SAMPLES_MAP_ATTR"]]
-        sample_id = s[_config["SAMPLES_ID_ATTR"]]
-        try:
-            map_format = find_maps(id=map_name)[0][_config["MAPS_FORMAT_ATTR"]]
-        except:
-            print(f"Warning: couldn't retrieve format for map {map_name}")
-        else:
-            if map_format not in result:
-                result[f"{map_format}_count"] = 1
-                result[map_format] = [(map_name, sample_id)]
+    for ind in individuals:
+        ind_result: dict = {
+            "individual_id": ind["_id"],
+            "files": [],
+            "files_count": 0
+        }
+        maps: dict = {}  # dict of maps to retrieve number of snps from
+        # Retrieving maps/samples with formats
+        for sample in ind[_config["INDIVIDUALS_SAMPLE_LIST_ATTR"]]:
+            map_name: str = sample[_config["SAMPLES_MAP_ATTR"]]
+            sample_id: str = sample[_config["SAMPLES_ID_ATTR"]]
+            try:
+                map_format: str = find_maps(
+                    id=map_name)[0][_config["MAPS_FORMAT_ATTR"]]
+            except IndexError:
+                print(f"Warning: couldn't retrieve format for map {map_name}")
             else:
-                result[f"{map_format}_count"] += 1
-                result[map_format].append((map_name, sample_id))
-    files = list_files(individual_id=str(individual["_id"]))
-    result["files"] = [f["filename"] for f in files]
-    result["files_count"] = len(files)
+                maps.setdefault(map_format, set())
+                maps[map_format].add(map_name)
+                ind_result[map_format + "_sample_count"] = ind_result.get(
+                    map_format + "_sample_count", 0) + 1
+                ind_result[map_format + "_sample"] = ind_result.get(
+                    map_format + "_sample", []) + [(map_name, sample_id)]
+        # Retrieving snps associated with ind
+        for map_format in maps.keys():
+            query_snps: dict = {
+                _config["SNPS_MAPS_ATTR"]: {
+                    "$in": list(maps[map_format])
+                }
+            }
+            ind_result[map_format + "_snps_count"] = _SNPS.count_documents(
+                filter=query_snps)
+        # Retrieving files of individual
+        files = list_files(individual_id=ind["_id"])
+        ind_result["files"] = []
+        for f in files:
+            try:
+                ind_result["files"].append(f["filename"])
+            except KeyError as e:
+                print(
+                    "Warning (", e,
+                    "): couldn't retrieve filename for file associated with",
+                    f"individual {ind['_id']}")
+            # Retrieving count of files by type
+            try:
+                ind_result[f["metadata"][_config["FILES_TYPE"]] +
+                           "_file_count"] = ind_result.get(
+                               f["metadata"][_config["FILES_TYPE"]] +
+                               "_file_count", 0) + 1
+            except KeyError as e:
+                print(
+                    "Warning (", e,
+                    "): couldn't retrieve file type for file associated with",
+                    f"individual {ind['_id']}")
+        # Appending individual summary to result
+        result.append(ind_result)
     return result
 
 
@@ -941,7 +1105,9 @@ def get_db_stats(scale=1):
 def __reserve_snp_ids(cnt):
     doc = _COUNTERS.find_one_and_update(
         {"_id": _config["SNPS_COLL"]},
-        {"$inc": {_config["COUNTERS_SEQ_VALUE_ATTR"]: cnt}},
+        {"$inc": {
+            _config["COUNTERS_SEQ_VALUE_ATTR"]: cnt
+        }},
     )
     return doc[_config["COUNTERS_SEQ_VALUE_ATTR"]]
 
@@ -970,7 +1136,9 @@ def __rev_adjust_snp(snp, map_writer):
 
 def __find_similar_snps(snp):
     query = {}
-    for attr in [_config["SNPS_CHROMOSOME_ATTR"], _config["SNPS_POSITION_ATTR"]]:
+    for attr in [
+            _config["SNPS_CHROMOSOME_ATTR"], _config["SNPS_POSITION_ATTR"]
+    ]:
         if attr not in snp:
             return []
         query[attr] = snp[attr]
@@ -978,7 +1146,7 @@ def __find_similar_snps(snp):
 
 
 def __user_snp_choice(snp, conflicts, force_use_existing):
-    id = -1
+    # id = -1
     print(str(snp) + " is similar to the following database SNPs:")
     i = 1
     for conflict_snp in conflicts:
@@ -998,11 +1166,9 @@ def __user_snp_choice(snp, conflicts, force_use_existing):
         options.add("n")
         options.add("N")
         if len(conflicts) == 1:
-            question += (
-                "; [e] - always use existing SNP"
-                " (you'll still be asked when there's"
-                " more than one option)"
-            )
+            question += ("; [e] - always use existing SNP"
+                         " (you'll still be asked when there's"
+                         " more than one option)")
             options.add("e")
             options.add("E")
     question += ": "
@@ -1019,9 +1185,8 @@ def __user_snp_choice(snp, conflicts, force_use_existing):
 
 def __fill_snp_ids(map_reader, force_create_new, force_use_existing):
     if force_create_new and force_use_existing:
-        raise Exception(
-            "force_create_new and force_use_existing cannot" " be used simultaneously."
-        )
+        raise Exception("force_create_new and force_use_existing cannot"
+                        " be used simultaneously.")
     next_id = __reserve_snp_ids(len(map_reader))
     snp_ids = []
     for snp in map_reader:
@@ -1057,12 +1222,12 @@ def __user_individual_choice(tatoo, individuals):
     i = 1
     for individual in individuals:
         print("(%d)" % i, end=" ")
-        pprint(individual)
+        # pprint(individual)
         i += 1
     question = "What do to? [0] - create new individual; "
     question += "[1] to [%d] - use i-th individual: " % (i - 1)
     resp = None
-    while resp == None:
+    while resp is None:
         try:
             resp = int(input(question))
             if resp < 0 or resp > len(individuals):
@@ -1077,6 +1242,8 @@ def __user_individual_choice(tatoo, individuals):
 def __next_individual_id():
     doc = _COUNTERS.find_one_and_update(
         {"_id": _config["INDIVIDUALS_COLL"]},
-        {"$inc": {_config["COUNTERS_SEQ_VALUE_ATTR"]: 1}},
+        {"$inc": {
+            _config["COUNTERS_SEQ_VALUE_ATTR"]: 1
+        }},
     )
     return doc[_config["COUNTERS_SEQ_VALUE_ATTR"]]

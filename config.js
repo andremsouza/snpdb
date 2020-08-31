@@ -38,6 +38,9 @@ config = {
 	"COUNTERS_COLL": "counters",
 	"COUNTERS_SEQ_VALUE_ATTR": "next",
 
-	"FILES_INDIVIDUAL_ATTR": "individual"
+	"FILES_FILENAME": "filename",
+	"FILES_INDIVIDUAL_ATTR": "individual_id",
+	"FILES_TYPE": "type",
+	"FILES_DESCRIPTION": "description"
 }
 

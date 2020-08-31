@@ -6,3 +6,9 @@ data/
 ssh_server/*
 mongodb_data/*
 .ipynb_checkpoints/*
+*.out
+*.log
+*.json
+*.png
+*.ipynb
+*.html
