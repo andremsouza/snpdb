@@ -69,6 +69,10 @@ exps: dict = {
         'file_type': 'FR',
         'nsnps_list': [100000.0, 1000000.0],
         'nsamples_list': [1.0],
+        'readers': {
+            'map': readers.FinalReportMapReader,
+            'ped': readers.FinalReportSampleReader
+        },
         'file_extensions': {
             'ext': '.fr',
             'ids': '.frids'
@@ -79,6 +83,10 @@ exps: dict = {
         'file_type': 'VCF',
         'nsnps_list': [100000.0, 1000000.0],
         'nsamples_list': [1.0],
+        'readers': {
+            'map': readers.VcfMapReader,
+            'ped': readers.VcfSampleReader
+        },
         'file_extensions': {
             'ext': '.vcf',
             'ids': '.vcfids'
@@ -102,17 +110,18 @@ exps: dict = {
             'ext': '.jpg'
         }
     },
-    '1.G': {
-        'compression_methods': {'snappy', 'zlib'},
-        'file_type': 'ALL',
-        'nsnps_list': [100000.0, 1000000.0],
-        'nsamples_list': [1.0],
-    },
+    # '1.G': {
+    #     'compression_methods': {'snappy', 'zlib'},
+    #     'file_type': 'ALL',
+    #     'nsnps_list': [100000.0, 1000000.0],
+    #     'nsamples_list': [1.0],
+    # },
     '2.A': {
         'compression_methods': {'snappy', 'zlib'},
         'file_type': '0125',
         'nsnps_list': [100000.0, 1000000.0],
-        'nsamples_list': [10.0, 100.0, 1000.0, 10000.0, 100000.0, 1000000.0],
+        'nsamples_list': [10.0, 100.0, 1000.0, 10000.0,
+                          100000.0],  # , 1000000.0],
         'readers': {
             'map': readers.Z125MapReader,
             'ped': readers.Z125SampleReader
@@ -127,14 +136,24 @@ exps: dict = {
         'compression_methods': {'snappy', 'zlib'},
         'file_type': 'VCF',
         'nsnps_list': [100000.0, 1000000.0],
-        'nsamples_list': [10.0, 100.0, 1000.0, 10000.0, 100000.0, 1000000.0],
+        'nsamples_list': [10.0, 100.0, 1000.0, 10000.0,
+                          100000.0],  # , 1000000.0],
+        'readers': {
+            'map': readers.VcfMapReader,
+            'ped': readers.VcfSampleReader
+        },
+        'file_extensions': {
+            'ext': '.vcf',
+            'ids': '.vcfids'
+        },
     },
-    '2.C': {
-        'compression_methods': {'snappy', 'zlib'},
-        'file_type': 'ALL',
-        'nsnps_list': [100000.0, 1000000.0],
-        'nsamples_list': [10.0, 100.0, 1000.0, 10000.0, 100000.0, 1000000.0],
-    },
+    # '2.C': {
+    #     'compression_methods': {'snappy', 'zlib'},
+    #     'file_type': 'ALL',
+    #     'nsnps_list': [100000.0, 1000000.0],
+    #     'nsamples_list': [10.0, 100.0, 1000.0, 10000.0,
+    #                       100000.0],  # , 1000000.0],
+    # },
 }
 nsnps_ids: dict = {100000.0: '100k', 1000000.0: '1m'}
 nsamples_ids: dict = {
@@ -370,14 +389,17 @@ def execute_experiment_two_files(result: dict) -> None:
 
         # 2.4 Busca de indivíduos, dada uma lista de SNPs
         snp = np.random.choice(snpdb.find_snp())
+        result['individuals_of_snps'].append({})
+        result['individuals_of_snps'][-1]
         t_tmp = time.time()
-        inds = snpdb.find_individuals_of_snps(id=snp['i'])
+        try:
+            inds = snpdb.find_individuals_of_snps(id=snp['i'], )
+            result['individuals_of_snps'][-1]['snp'] = snp
+            result['individuals_of_snps'][-1]['individuals'] = inds
+        except Exception as e:
+            print("Warning: couldn't retrieve individuals from database", e)
         t_tmp = time.time() - t_tmp
-        result['individuals_of_snps'].append({
-            'snp': snp,
-            'individuals': inds,
-            'time': t_tmp
-        })
+        result['individuals_of_snps'][-1]['snp'] = t_tmp
 
         # TODO: 2.5 Exportação de indivíduos para formatos originais
 
@@ -455,11 +477,11 @@ def execute_experiment_one_file(result: dict) -> None:
             nsamples_block = int(np.minimum(remaining_samples, 10000.0))
             # Map/Samples file
             generate_random_file(filename=fname,
-                                 file_type=f_ext['ped'],
+                                 file_type=f_ext['ext'],
                                  verbose=True,
                                  n=nsamples_block,
                                  map_size=nsnps,
-                                 start_from_id=start_sample)
+                                 start_samples_from_id=start_sample)
             # Id map file
             generate_random_file(filename=ifname,
                                  file_type='.ids',
