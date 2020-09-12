@@ -5,6 +5,7 @@
 # ## Imports e inicialização
 
 # %%
+from experiment_config import exps, nsnps_ids, nsamples_ids, bin_file_types
 import json
 import matplotlib.pyplot as plt
 import numpy as np
@@ -18,64 +19,6 @@ graph_dir = './'
 
 # Constants and global variables
 results: dict = {}
-exps: dict = {
-    1: {
-        'compression_methods': {'snappy', 'zlib'},
-        'ids': {
-            '1.A': '0125',
-            '1.B': 'FR',
-            '1.C': 'VCF',
-            '1.D': 'PLINK',
-            '1.E': 'FastQ',
-            '1.F': 'Media',
-        },
-        'nsnps_lists': {
-            '1.A': [100000.0, 1000000.0],
-            '1.B': [100000.0, 1000000.0],
-            '1.C': [100000.0, 1000000.0],
-            '1.D': [100000.0, 1000000.0],
-            '1.E': [np.nan],
-            '1.F': [np.nan],
-        },
-        'nsamples_lists': {
-            '1.A': [1.0],
-            '1.B': [1.0],
-            '1.C': [1.0],
-            '1.D': [1.0],
-            '1.E': [np.nan],
-            '1.F': [np.nan],
-        },
-    },
-    2: {
-        'compression_methods': {'snappy'},
-        'ids': {
-            '2.1.A': '0125',
-            '2.1.B': 'VCF',
-            # '2.1.C': 'ALL',
-        },
-        'nsnps_lists': {
-            '2.1.A': [100000.0],
-            '2.1.B': [100000.0],
-            # '2.1.C': [100000],
-        },
-        'nsamples_lists': {
-            '2.1.A': [10.0, 100.0, 1000.0, 10000.0, 100000.0, 1000000.0],
-            '2.1.B': [10.0, 100.0, 1000.0, 10000.0, 100000.0],  # #1000000.0],
-            # '2.1.C': [10, 100, 1000, 10000, 100000],
-        },
-    }
-}
-nsnps_ids: dict = {100000.0: '100k', 1000000.0: '1m'}
-nsamples_ids: dict = {
-    1.0: '1',
-    10.0: '10',
-    100.0: '100',
-    1000.0: '1k',
-    10000.0: '10k',
-    100000.0: '100k',
-    1000000.0: '1m'
-}
-bin_file_types = {'FastQ', 'Media', 'ALL'}
 
 # Storing data in a Pandas DataFrame
 col_names: list = [
