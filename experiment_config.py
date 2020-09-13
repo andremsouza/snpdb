@@ -1,5 +1,12 @@
 import readers
 
+# Constants and global variables
+data_dir: str = './data/'  # Data output directory
+fastq_dir_1: str = '../1_FASTq_VCF/1_SRR10752699_MISSOURI/'  # data directory
+fastq_dir_2: str = '../1_FASTq_VCF/2_VCF_bos_taurus/'  # data directory
+graph_dir: str = './graphs/'  # Graph output directory
+results_fname: str = data_dir + 'experiment_results.json'
+
 # Dictionary with experiment parameters
 exps: dict = {
     '1.A': {

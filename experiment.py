@@ -5,7 +5,8 @@
 # ## Imports e inicialização
 
 # %%
-from experiment_config import exps, nsnps_ids, nsamples_ids
+from experiment_config import data_dir, fastq_dir_1, fastq_dir_2
+from experiment_config import results_fname, exps, nsnps_ids, nsamples_ids
 import importlib
 import json
 import numpy as np
@@ -19,12 +20,7 @@ import time
 from typing import Callable, Tuple
 # import writers
 
-# Constants and global variables
-data_dir: str = './data/'  # Data output directory
-fastq_dir_1: str = '../1_FASTq_VCF/1_SRR10752699_MISSOURI/'  # data directory
-fastq_dir_2: str = '../1_FASTq_VCF/2_VCF_bos_taurus/'  # data directory
-graph_dir: str = './graphs/'  # Graph output directory
-results_fname: str = data_dir + 'experiment_results.json'
+# Import existing results
 results: dict = {}
 try:
     with open(results_fname, 'r') as f:
@@ -45,7 +41,7 @@ pprint(os.listdir(fastq_dir_2))
 
 
 # %%
-def reset_db(compression_method: str = 'snappy') -> None:
+def reset_db(compression_method: str) -> None:
     """Reset MongoDB database for experiments.
 
     Args:
@@ -101,7 +97,12 @@ def generate_random_file(filename: str,
     return t, os.stat(filename).st_size
 
 
-def execute_experiment_two_files(result: dict) -> None:
+def execute_experiment_two_files(result: dict,
+                                 experiment_id: str,
+                                 compression_method: str,
+                                 nsnps: int,
+                                 nsamples: int,
+                                 N: int = 1) -> None:
     """Executes experiment for file types with two files (map, sample)
     Warning: this function uses variables defined outside its scope
 
@@ -109,6 +110,8 @@ def execute_experiment_two_files(result: dict) -> None:
         result (dict): Dictionary for experiment. Values will be assigned
                        to this dictionary "by reference".
     """
+    nsnps_id = nsnps_ids[nsnps]
+    nsamples_id = nsamples_ids[nsamples]
     print("Starting Experiment " + experiment_id + " (" + nsnps_id +
           " SNPs, " + nsamples_id + " individuals) with N = " + str(N) +
           "; Compression method: " + compression_method)
@@ -134,7 +137,7 @@ def execute_experiment_two_files(result: dict) -> None:
     for i in range(N):
         print("i: " + str(i))
         print("Resetting database...")
-        reset_db()
+        reset_db(compression_method=compression_method)
         print("Database reset operation successful.")
         print("Generating input files...")
         t_map: float = 0.0
@@ -292,7 +295,12 @@ def execute_experiment_two_files(result: dict) -> None:
                       sort_keys=True)
 
 
-def execute_experiment_one_file(result: dict) -> None:
+def execute_experiment_one_file(result: dict,
+                                experiment_id: str,
+                                compression_method: str,
+                                nsnps: int,
+                                nsamples: int,
+                                N: int = 1) -> None:
     """Executes experiment for file types with one file
     Warning: this function uses variables defined outside its scope
 
@@ -300,6 +308,8 @@ def execute_experiment_one_file(result: dict) -> None:
         result (dict): Dictionary for experiment. Values will be assigned
                        to this dictionary "by reference".
     """
+    nsnps_id = nsnps_ids[nsnps]
+    nsamples_id = nsamples_ids[nsamples]
     print("Starting Experiment " + experiment_id + " (" + nsnps_id +
           " SNPs, " + nsamples_id + " individuals) with N = " + str(N) +
           "; Compression method: " + compression_method)
@@ -322,7 +332,7 @@ def execute_experiment_one_file(result: dict) -> None:
     for i in range(N):
         print("i: " + str(i))
         print("Resetting database...")
-        reset_db()
+        reset_db(compression_method=compression_method)
         print("Database reset operation successful.")
         print("Generating input files...")
         t_map = 0.0
@@ -482,7 +492,9 @@ def execute_experiment_one_file(result: dict) -> None:
                       sort_keys=True)
 
 
-def execute_experiment_bin_file(result: dict) -> None:
+def execute_experiment_bin_file(result: dict,
+                                compression_method: str,
+                                N: int = 1) -> None:
     """Executes experiment for file types inserted in binary mode
     Warning: this function uses variables defined outside its scope
 
@@ -510,7 +522,7 @@ def execute_experiment_bin_file(result: dict) -> None:
     for i in range(N):
         print("i: " + str(i))
         print("Resetting database...")
-        reset_db()
+        reset_db(compression_method=compression_method)
         print("Database reset operation successful.")
         if file_type == 'FastQ':
             print(fname + "\tSize: " +
@@ -641,7 +653,9 @@ for experiment_id in experiment_ids:
                     nsamples_id]
                 # Only execute experiment if empty
                 if len(result) == 0:
-                    execute_experiment_two_files(result)
+                    execute_experiment_two_files(result, experiment_id,
+                                                 compression_method, nsnps_id,
+                                                 nsamples_id, N)
 
 # %% [markdown]
 # ## 1.C - Arquivo FR
@@ -675,7 +689,9 @@ for experiment_id in experiment_ids:
                     nsamples_id]
                 # Only execute experiment if empty
                 if len(result) == 0:
-                    execute_experiment_one_file(result)
+                    execute_experiment_one_file(result, experiment_id,
+                                                compression_method, nsnps,
+                                                nsamples, N)
 
 # %% [markdown]
 # ## 1.E - Arquivo FastQ
@@ -698,7 +714,7 @@ for experiment_id in experiment_ids:
         result = results[experiment_id][compression_method]
         # Only execute experiment if empty
         if len(result) == 0:
-            execute_experiment_bin_file(result)
+            execute_experiment_bin_file(result, compression_method, N)
 
 # %% [markdown]
 # # Saving results

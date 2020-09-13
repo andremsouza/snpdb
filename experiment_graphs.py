@@ -5,7 +5,8 @@
 # ## Imports e inicialização
 
 # %%
-from experiment_config import exps, nsnps_ids, nsamples_ids, bin_file_types
+from experiment_config import graph_dir, bin_file_types
+from experiment_config import results_fname, exps, nsnps_ids, nsamples_ids
 import json
 import matplotlib.pyplot as plt
 import numpy as np
@@ -14,16 +15,18 @@ from pprint import pp
 import seaborn as sns
 import snpdb
 
-data_dir = './'
-graph_dir = './'
-
-# Constants and global variables
+# Import results from output of experiment.py
 results: dict = {}
+try:
+    with open(results_fname, 'r') as f:
+        results = json.load(f)
+except Exception:
+    results = {}
 
 # Storing data in a Pandas DataFrame
 col_names: list = [
-    'experiment_idx', 'experiment_id', 'compression_method', 'file_type',
-    'nsnps', 'nsamples', 'fsize', 'dbsize', 'time'
+    'experiment_id', 'compression_method', 'file_type', 'nsnps', 'nsamples',
+    'fsize', 'dbsize', 'time'
 ]
 df: pd.DataFrame = pd.DataFrame(columns=col_names)
 
@@ -31,65 +34,53 @@ df: pd.DataFrame = pd.DataFrame(columns=col_names)
 # ### Abrindo e processando arquivos de resultados
 
 # %%
-results[1], results[2] = {}, {}
-with open(data_dir + "exp1results_snappy.json", 'r') as f:
-    results[1]['snappy'] = json.load(f)
-with open(data_dir + "exp1results_zlib.json", 'r') as f:
-    results[1]['zlib'] = json.load(f)
-with open(data_dir + "exp2_1results.json", 'r') as f:
-    results[2]['snappy'] = json.load(f)
 
 # Reading experiment result files and building DataFrame
-for e_idx in exps:
-    for c_method in exps[e_idx]['compression_methods']:
-        for e_id in exps[e_idx]['ids']:
-            for nsnps in exps[e_idx]['nsnps_lists'][e_id]:
-                if exps[e_idx]['ids'][e_id] not in bin_file_types:
-                    nsnps_id = nsnps_ids[nsnps]
-                else:
+for experiment_id in exps:
+    if experiment_id not in results:
+        continue
+    for compression_method in exps[experiment_id]['compression_methods']:
+        for nsnps in exps[experiment_id]['nsnps_list']:
+            for nsamples in exps[experiment_id]['nsamples_list']:
+                if exps[experiment_id]['file_type'] in bin_file_types:
+                    nsnps = np.nan
+                    nsamples = np.nan
                     nsnps_id = None
-                for nsamples in exps[e_idx]['nsamples_lists'][e_id]:
-                    if exps[e_idx]['ids'][e_id] not in bin_file_types:
-                        nsamples_id = nsamples_ids[nsamples]
-                    else:
-                        nsamples_id = None
+                    nsamples_id = None
+                else:
+                    nsnps_id = nsnps_ids[nsnps]
+                    nsamples_id = nsamples_ids[nsamples]
 
-                    # Getting result values lists from json
-                    fsizes: list = []
-                    dbsizes: list = []
-                    times: list = []
-                    if exps[e_idx]['ids'][e_id] not in bin_file_types:
-                        fsizes = results[e_idx][c_method][e_id][nsnps_id][
-                            nsamples_id]['fsize']
-                        dbsizes = results[e_idx][c_method][e_id][nsnps_id][
-                            nsamples_id]['dbsize']
-                        times = [
-                            map_time + sample_time
-                            for map_time, sample_time in zip(
-                                results[e_idx][c_method][e_id][nsnps_id]
-                                [nsamples_id]['map']['time'], results[e_idx]
-                                [c_method][e_id][nsnps_id][nsamples_id]
-                                ['sample']['time'])
-                        ]
-                    else:
-                        fsizes = results[e_idx][c_method][e_id]['fsize']
-                        dbsizes = results[e_idx][c_method][e_id]['dbsize']
-                        times = results[e_idx][c_method][e_id]['time']
-                    # Mounting rows and appending to DataFrame
-                    rows = [{
-                        'experiment_idx': e_idx,
-                        'experiment_id': e_id,
-                        'compression_method': c_method,
-                        'file_type': exps[e_idx]['ids'][e_id],
-                        'nsnps': nsnps,
-                        'nsamples': nsamples,
-                        'fsize': float(i),
-                        'dbsize': float(j),
-                        'time': float(k),
-                    } for i, j, k in zip(fsizes, dbsizes, times)]
-                    df = df.append(rows,
-                                   ignore_index=True,
-                                   verify_integrity=True)
+                # Getting result values lists from json
+                fsizes: list = []
+                dbsizes: list = []
+                times: list = []
+                if exps[experiment_id]['file_type'] in bin_file_types:
+                    fsizes = results[experiment_id][compression_method][
+                        'fsize']
+                    dbsizes = results[experiment_id][compression_method][
+                        'dbsize']
+                    times = results[experiment_id][compression_method]['time']
+                    delete_times = [0.0] * len(fsizes)
+                else:
+                    fsizes = results[experiment_id][compression_method][
+                        nsnps_id][nsamples_id]['fsize']
+                    dbsizes = results[experiment_id][compression_method][
+                        nsnps_id][nsamples_id]['dbsize']
+                    times = results[experiment_id][compression_method][
+                        nsnps_id][nsamples_id]['time']
+                # Mounting rows and appending to DataFrame
+                rows = [{
+                    'experiment_id': experiment_id,
+                    'compression_method': compression_method,
+                    'file_type': exps[experiment_id]['file_type'],
+                    'nsnps': nsnps,
+                    'nsamples': nsamples,
+                    'fsize': float(i),
+                    'dbsize': float(j),
+                    'time': float(k),
+                } for i, j, k in zip(fsizes, dbsizes, times)]
+                df = df.append(rows, ignore_index=True, verify_integrity=True)
 
 # %% [markdown]
 # ## Experimento 1 - Tempo de importação/espaço ocupado a partir da base zerada
@@ -115,10 +106,10 @@ for e_idx in exps:
 # ### Tempos de execução
 
 # %%
-df_melted = pd.melt(df[df['experiment_idx'] == 1],
+df_melted = pd.melt(df[df['experiment_id'].str.startswith('1')],
                     id_vars=[
-                        'experiment_idx', 'experiment_id',
-                        'compression_method', 'file_type', 'nsnps', 'nsamples'
+                        'experiment_id', 'compression_method', 'file_type',
+                        'nsnps', 'nsamples'
                     ],
                     value_vars=['time'])
 df_melted = df_melted.fillna(value='Binary file')
@@ -162,17 +153,17 @@ snsplot.set(yscale='log')
 snsplot = snsplot.set_axis_labels("Tipo de arquivo",
                                   "Tempo de execução log10 (s)")
 # .set_titles(template="Método de compressão: {row_name} - {col_name}")
-snsplot.savefig('./experiment1_times.png')
+snsplot.savefig(graph_dir + 'experiment1_times.png')
 plt.draw()
 
 # %% [markdown]
 # ### Comparação de tamanhos de arquivos antes/depois das inserções (100k SNPs)
 
 # %%
-df_melted = pd.melt(df[df['experiment_idx'] == 1],
+df_melted = pd.melt(df[df['experiment_id'].str.startswith('1')],
                     id_vars=[
-                        'experiment_idx', 'experiment_id',
-                        'compression_method', 'file_type', 'nsnps', 'nsamples'
+                        'experiment_id', 'compression_method', 'file_type',
+                        'nsnps', 'nsamples'
                     ],
                     value_vars=['fsize', 'dbsize'])
 df_melted = df_melted.fillna(
@@ -211,17 +202,17 @@ snsplot.set(yscale='log')
 snsplot = snsplot.set_axis_labels(
     "Tipo de arquivo", "Tamanho do arquivo log10 (MB)").set_titles(
         template=" 100k SNPs - {col_var} = {col_name}", )
-snsplot.savefig('./experiment1_sizes_100k.png')
+snsplot.savefig(graph_dir + 'experiment1_sizes_100k.png')
 plt.draw()
 
 # %% [markdown]
 # ### Comparação de tamanhos de arquivos antes/depois das inserções (1m SNPs)
 
 # %%
-df_melted = pd.melt(df[df['experiment_idx'] == 1],
+df_melted = pd.melt(df[df['experiment_id'].str.startswith('1')],
                     id_vars=[
-                        'experiment_idx', 'experiment_id',
-                        'compression_method', 'file_type', 'nsnps', 'nsamples'
+                        'experiment_id', 'compression_method', 'file_type',
+                        'nsnps', 'nsamples'
                     ],
                     value_vars=['fsize', 'dbsize'])
 df_melted = df_melted.fillna(
@@ -260,7 +251,7 @@ snsplot.set(yscale='log')
 snsplot = snsplot.set_axis_labels(
     "Tipo de arquivo", "Tamanho do arquivo log10 (MB)").set_titles(
         template=" 1m SNPs - {col_var} = {col_name}", )
-snsplot.savefig('./experiment1_sizes_1m.png')
+snsplot.savefig(graph_dir + 'experiment1_sizes_1m.png')
 plt.draw()
 
 # %% [markdown]
@@ -285,10 +276,10 @@ plt.draw()
 
 # %%
 
-df_melted = pd.melt(df[df['experiment_idx'] == 2],
+df_melted = pd.melt(df[df['experiment_id'].str.startswith('2')],
                     id_vars=[
-                        'experiment_idx', 'experiment_id',
-                        'compression_method', 'file_type', 'nsnps', 'nsamples'
+                        'experiment_id', 'compression_method', 'file_type',
+                        'nsnps', 'nsamples'
                     ],
                     value_vars=['time'])
 sns.set(style="whitegrid",
@@ -321,17 +312,17 @@ snsplot.set(xscale='log')
 snsplot = snsplot.set_axis_labels("# de amostras",
                                   "Tempo de execução (s)").set_titles(
                                       template="Tipo de arquivo = {col_name}")
-snsplot.savefig('./experiment2_1_times.png')
+snsplot.savefig(graph_dir + 'experiment2_1_times.png')
 plt.draw()
 
 # %% [markdown]
 # ### Tamanhos de arquivos antes e depois da inserção
 
 # %%
-df_melted = pd.melt(df[df['experiment_idx'] == 2],
+df_melted = pd.melt(df[df['experiment_id'].str.startswith('2')],
                     id_vars=[
-                        'experiment_idx', 'experiment_id',
-                        'compression_method', 'file_type', 'nsnps', 'nsamples'
+                        'experiment_id', 'compression_method', 'file_type',
+                        'nsnps', 'nsamples'
                     ],
                     value_vars=['fsize', 'dbsize'])
 df_melted['value'] /= 1024**2
@@ -355,7 +346,7 @@ snsplot.set(xscale='log')
 snsplot = snsplot.set_axis_labels("# de amostras",
                                   "Tamanho do arquivo (MB)").set_titles(
                                       template="Tipo de arquivo = {col_name}")
-snsplot.savefig('./experiment2_1_sizes.png')
+snsplot.savefig(graph_dir + 'experiment2_1_sizes.png')
 plt.draw()
 
 # %% [markdown]
