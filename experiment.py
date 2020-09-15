@@ -267,7 +267,7 @@ def execute_experiment_two_files(result: dict,
         except Exception as e:
             print("Warning: couldn't retrieve individuals from database", e)
         t_tmp = time.time() - t_tmp
-        result['individuals_of_snps'][-1]['snp'] = t_tmp
+        result['individuals_of_snps'][-1]['time'] = t_tmp
 
         # TODO: 2.5 Exportação de indivíduos para formatos originais
 
@@ -654,8 +654,8 @@ for experiment_id in experiment_ids:
                 # Only execute experiment if empty
                 if len(result) == 0:
                     execute_experiment_two_files(result, experiment_id,
-                                                 compression_method, nsnps_id,
-                                                 nsamples_id, N)
+                                                 compression_method, nsnps,
+                                                 nsamples, N)
 
 # %% [markdown]
 # ## 1.C - Arquivo FR
