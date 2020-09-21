@@ -67,6 +67,16 @@ for experiment_id in exps:
                     summarize_times = [0.0] * len(fsizes)
                     individuals_of_snps_times = [0.0] * len(fsizes)
                     delete_individual_times = [0.0] * len(fsizes)
+                elif experiment_id == '2.7':
+                    fsizes = results[experiment_id][compression_method][
+                        nsnps_id][nsamples_id]['fsize']
+                    dbsizes = results[experiment_id][compression_method][
+                        nsnps_id][nsamples_id]['dbsize']
+                    times = results[experiment_id][compression_method][
+                        nsnps_id][nsamples_id]['time']
+                    summarize_times = [0.0] * len(fsizes)
+                    individuals_of_snps_times = [0.0] * len(fsizes)
+                    delete_individual_times = [0.0] * len(fsizes)
                 else:
                     fsizes = results[experiment_id][compression_method][
                         nsnps_id][nsamples_id]['fsize']
@@ -596,10 +606,38 @@ plt.draw()
 
 # %% [markdown]
 # ## Experimento 2.7 - Comparação de importação/exportação no modo “bruto”
-# - Em progresso: Script está feito, mas aguardando finalização do experimento
-# 2.1
 
 # %%
-# TODO
+# %% [markdown]
+# ### Tempos de execução
+
+# %%
+df_melted = pd.melt(df[df['experiment_id'].isin(
+    ['2.A', '2.7'])][df['nsnps'] == 100000.0][df['nsamples'] == 10000.0],
+                    id_vars=[
+                        'experiment_id', 'compression_method', 'file_type',
+                        'nsnps', 'nsamples'
+                    ],
+                    value_vars=['time'])
+sns.set(style="whitegrid",
+        palette=sns.color_palette("muted", n_colors=6, desat=1.0))
+snsplot = sns.catplot(
+    x='compression_method',
+    y='value',
+    hue='experiment_id',
+    data=df_melted,
+    kind='bar',
+    height=8,
+    aspect=1,
+)
+
+snsplot._legend.set_title("Experimento")
+# snsplot.set(xscale='log')
+snsplot.set(yscale='log')
+snsplot = snsplot.set_axis_labels("Método de compressão",
+                                  "Tempo de execução log10 (s)")
+# .set_titles(template="Método de compressão: {row_name} - {col_name}")
+snsplot.savefig(graph_dir + 'experiment2_7_times.png')
+plt.draw()
 
 # %%
