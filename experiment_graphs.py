@@ -11,9 +11,9 @@ import json
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-from pprint import pp
+# from pprint import pp
 import seaborn as sns
-import snpdb
+# import snpdb
 
 # Import results from output of experiment.py
 results: dict = {}
@@ -51,17 +51,22 @@ for experiment_id in exps:
                     nsnps_id = nsnps_ids[nsnps]
                     nsamples_id = nsamples_ids[nsamples]
 
-                # Getting result values lists from json
+                # Getting result values lists from json for insert operation
                 fsizes: list = []
                 dbsizes: list = []
                 times: list = []
+                summarize_times: list = []
+                individuals_of_snps_times: list = []
+                delete_individual_times: list = []
                 if exps[experiment_id]['file_type'] in bin_file_types:
                     fsizes = results[experiment_id][compression_method][
                         'fsize']
                     dbsizes = results[experiment_id][compression_method][
                         'dbsize']
                     times = results[experiment_id][compression_method]['time']
-                    delete_times = [0.0] * len(fsizes)
+                    summarize_times = [0.0] * len(fsizes)
+                    individuals_of_snps_times = [0.0] * len(fsizes)
+                    delete_individual_times = [0.0] * len(fsizes)
                 else:
                     fsizes = results[experiment_id][compression_method][
                         nsnps_id][nsamples_id]['fsize']
@@ -69,6 +74,26 @@ for experiment_id in exps:
                         nsnps_id][nsamples_id]['dbsize']
                     times = results[experiment_id][compression_method][
                         nsnps_id][nsamples_id]['time']
+                    # Getting results values for summarize operation
+                    summarize_times = [
+                        summ['time']
+                        for summ in results[experiment_id][compression_method]
+                        [nsnps_id][nsamples_id]['summarize']
+                    ]
+                    for ind in results[experiment_id][compression_method][
+                            nsnps_id][nsamples_id]['individuals_of_snps']:
+                        try:
+                            # Fix KeyError in results
+                            individuals_of_snps_times.append(float(
+                                ind['time']))
+                        except KeyError:
+                            individuals_of_snps_times.append(float(ind['snp']))
+                    delete_individual_times = [
+                        ind['time']
+                        for ind in results[experiment_id][compression_method]
+                        [nsnps_id][nsamples_id]['delete_individual']
+                    ]
+
                 # Mounting rows and appending to DataFrame
                 rows = [{
                     'experiment_id': experiment_id,
@@ -79,7 +104,12 @@ for experiment_id in exps:
                     'fsize': float(i),
                     'dbsize': float(j),
                     'time': float(k),
-                } for i, j, k in zip(fsizes, dbsizes, times)]
+                    'summarize': float(l),
+                    'individuals_of_snps': float(m),
+                    'delete_individual': float(n)
+                } for i, j, k, l, m, n in zip(
+                    fsizes, dbsizes, times, summarize_times,
+                    individuals_of_snps_times, delete_individual_times)]
                 df = df.append(rows, ignore_index=True, verify_integrity=True)
 
 # %% [markdown]
@@ -266,8 +296,7 @@ plt.draw()
 # %% [markdown]
 # ## Experimento 2.1 - Tempos de importação para grandes volumes de dados
 # Analisando performance considerando os casos com menor e maior tempo de
-# importação da seção 1,assim como o caso F (tempo de importação para todos os
-# tipos de arquivos).
+# importação da seção 1
 # - Caso menor: 0125
 # - Caso maior: VCF
 
@@ -275,7 +304,6 @@ plt.draw()
 # ### Tempos de execução
 
 # %%
-
 df_melted = pd.melt(df[df['experiment_id'].str.startswith('2')],
                     id_vars=[
                         'experiment_id', 'compression_method', 'file_type',
@@ -284,10 +312,13 @@ df_melted = pd.melt(df[df['experiment_id'].str.startswith('2')],
                     value_vars=['time'])
 sns.set(style="whitegrid",
         palette=sns.color_palette("muted", n_colors=6, desat=1.0))
-snsplot = sns.lmplot(data=df_melted[df_melted['variable'] == 'time'],
+snsplot = sns.lmplot(data=df_melted,
                      y='value',
                      x='nsamples',
-                     col='file_type',
+                     row='file_type',
+                     col='compression_method',
+                     col_order=['snappy', 'zlib'],
+                     hue='nsnps',
                      order=1,
                      height=8,
                      aspect=1,
@@ -296,27 +327,28 @@ snsplot = sns.lmplot(data=df_melted[df_melted['variable'] == 'time'],
                      sharex=True,
                      sharey=False)
 
-# Labelling points of graph
-for idx, g in enumerate(snsplot.axes[0]):
-    file_type = {0: '0125', 1: 'VCF'}[idx]
-    df_tmp = df_melted[df_melted['file_type'] == file_type]
-    for row_idx, row in df_tmp.loc[:, ['value', 'nsamples']].iterrows():
-        x = row['nsamples'] * 0.6
-        y = row['value'] + 0.05 * df_tmp['value'].max()
-        label = "{:.3f}".format(row['value'])
-        g.text(x, y, label)
+# # Labelling points of graph
+# for idx, g in enumerate(snsplot.axes[0]):
+#     file_type = {0: '0125', 1: 'VCF'}[idx]
+#     df_tmp = df_melted[df_melted['file_type'] == file_type]
+#     for row_idx, row in df_tmp.loc[:, ['value', 'nsamples']].iterrows():
+#         x = row['nsamples'] * 0.6
+#         y = row['value'] + 0.05 * df_tmp['value'].max()
+#         label = "{:.3f}".format(row['value'])
+#         g.text(x, y, label)
 
 # snsplot._legend.set_title("Tipo de arquivo")
-snsplot.set(xscale='log')
+# snsplot.set(xscale='log')
 # snsplot.set(yscale='log')
-snsplot = snsplot.set_axis_labels("# de amostras",
-                                  "Tempo de execução (s)").set_titles(
-                                      template="Tipo de arquivo = {col_name}")
+snsplot = snsplot.set_axis_labels(
+    "# de amostras", "Tempo de execução (s)"
+).set_titles(
+    template="Tipo de arquivo = {row_name}; Método de compressão = {col_name}")
 snsplot.savefig(graph_dir + 'experiment2_1_times.png')
 plt.draw()
 
 # %% [markdown]
-# ### Tamanhos de arquivos antes e depois da inserção
+# ### Tamanhos de arquivos antes e depois da inserção (100k SNPs)
 
 # %%
 df_melted = pd.melt(df[df['experiment_id'].str.startswith('2')],
@@ -325,6 +357,7 @@ df_melted = pd.melt(df[df['experiment_id'].str.startswith('2')],
                         'nsnps', 'nsamples'
                     ],
                     value_vars=['fsize', 'dbsize'])
+df_melted = df_melted[df_melted['nsnps'] == 100000.0]
 df_melted['value'] /= 1024**2
 sns.set(style="whitegrid",
         palette=sns.color_palette("muted", n_colors=6, desat=1.0))
@@ -333,7 +366,9 @@ snsplot = sns.lmplot(data=df_melted[df_melted['variable'].isin(
                      y='value',
                      x='nsamples',
                      hue='variable',
-                     col='file_type',
+                     row='file_type',
+                     col='compression_method',
+                     col_order=['snappy', 'zlib'],
                      order=1,
                      height=8,
                      aspect=1,
@@ -342,76 +377,222 @@ snsplot = sns.lmplot(data=df_melted[df_melted['variable'].isin(
                      sharex=True,
                      sharey=False)
 snsplot._legend.set_title("")
-snsplot.set(xscale='log')
-snsplot = snsplot.set_axis_labels("# de amostras",
-                                  "Tamanho do arquivo (MB)").set_titles(
-                                      template="Tipo de arquivo = {col_name}")
-snsplot.savefig(graph_dir + 'experiment2_1_sizes.png')
+# snsplot.set(xscale='log')
+snsplot = snsplot.set_axis_labels(
+    "# de amostras", "Tamanho do arquivo (MB)"
+).set_titles(
+    template="Tipo de arquivo = {row_name}; Método de compressão = {col_name}")
+snsplot.savefig(graph_dir + 'experiment2_1_sizes_100k.png')
+plt.draw()
+
+# %% [markdown]
+# ### Tamanhos de arquivos antes e depois da inserção (1m SNPs)
+
+# %%
+df_melted = pd.melt(df[df['experiment_id'].str.startswith('2')],
+                    id_vars=[
+                        'experiment_id', 'compression_method', 'file_type',
+                        'nsnps', 'nsamples'
+                    ],
+                    value_vars=['fsize', 'dbsize'])
+df_melted = df_melted[df_melted['nsnps'] == 1000000.0]
+df_melted['value'] /= 1024**2
+sns.set(style="whitegrid",
+        palette=sns.color_palette("muted", n_colors=6, desat=1.0))
+snsplot = sns.lmplot(data=df_melted[df_melted['variable'].isin(
+    ['fsize', 'dbsize'])],
+                     y='value',
+                     x='nsamples',
+                     hue='variable',
+                     row='file_type',
+                     col='compression_method',
+                     col_order=['snappy', 'zlib'],
+                     order=1,
+                     height=8,
+                     aspect=1,
+                     legend_out=True,
+                     truncate=False,
+                     sharex=True,
+                     sharey=False)
+snsplot._legend.set_title("")
+# snsplot.set(xscale='log')
+snsplot = snsplot.set_axis_labels(
+    "# de amostras", "Tamanho do arquivo (MB)"
+).set_titles(
+    template="Tipo de arquivo = {row_name}; Método de compressão = {col_name}")
+snsplot.savefig(graph_dir + 'experiment2_1_sizes_1m.png')
 plt.draw()
 
 # %% [markdown]
 # ### Comentários
-# - Os gráficos são referentes aos resultados parciais do experimento 2.1,
-# i.e., com execuções com 100 mil marcadores de SNPs, até 1 milhão de amostras
-# para o tipo de arquivo 0125 e até 100 mil amostras para o tipo de arquivo
-# VCF;
+# - Os gráficos são referentes aos resultados do experimento 2.1,
+# i.e., com execuções com 100 mil e 1 milhão de marcadores de SNPs,
+# até 100 mil de amostras e até 10 mil amostras para o tipo de arquivo VCF
 # - Para cada gráfico, foi feita uma regressão linear, e foi traçada a
-# linha resultante;
+# linha resultante, e seu intervale de confiança com C=0.95;
 # - Considerando o gráfico de tamanhos de arquivo, as legendas "fsize" e
 # "dbsize" referem-se, respectivamente, aos tamanhos dos arquivos de dados
 # antes e depois da inserção na base de dados.
+# - Verificar possíveis melhorias para a apresentação dos gráficos dessa seção
 
 # %% [markdown]
 # ## Experimento 2.2 - Sumarização
 # Análise de sumarização de dados, dado um indivíduo presente na base de dados.
 
-# %% [markdown]
-# ### Utilizando biblioteca snpdb para sumarização de um indíviduo
-
 # %%
-inds = snpdb.find_individuals()
-ind = np.random.choice(inds, size=2, replace=True)
-summary = snpdb.summarize(ind[0])
-pp(summary)
+df_melted = pd.melt(df[df['experiment_id'].str.startswith('2')],
+                    id_vars=[
+                        'experiment_id', 'compression_method', 'file_type',
+                        'nsnps', 'nsamples'
+                    ],
+                    value_vars=['summarize'])
+sns.set(style="whitegrid",
+        palette=sns.color_palette("muted", n_colors=6, desat=1.0))
+snsplot = sns.lmplot(data=df_melted,
+                     y='value',
+                     x='nsamples',
+                     row='file_type',
+                     col='compression_method',
+                     col_order=['snappy', 'zlib'],
+                     hue='nsnps',
+                     order=1,
+                     height=8,
+                     aspect=1,
+                     legend_out=False,
+                     truncate=False,
+                     sharex=True,
+                     sharey=False)
+
+# # Labelling points of graph
+# for idx, g in enumerate(snsplot.axes[0]):
+#     file_type = {0: '0125', 1: 'VCF'}[idx]
+#     df_tmp = df_melted[df_melted['file_type'] == file_type]
+#     for row_idx, row in df_tmp.loc[:, ['value', 'nsamples']].iterrows():
+#         x = row['nsamples'] * 0.6
+#         y = row['value'] + 0.05 * df_tmp['value'].max()
+#         label = "{:.3f}".format(row['value'])
+#         g.text(x, y, label)
+
+# snsplot._legend.set_title("Tipo de arquivo")
+# snsplot.set(xscale='log')
+# snsplot.set(yscale='log')
+snsplot = snsplot.set_axis_labels(
+    "# de amostras", "Tempo de execução (s)"
+).set_titles(
+    template="Tipo de arquivo = {row_name}; Método de compressão = {col_name}")
+snsplot.savefig(graph_dir + 'experiment2_1_times.png')
+plt.draw()
 
 # %% [markdown]
 # ## Experimento 2.3 - Exportação de sumarização para formatos originais
 # - Em progresso
 
 # %%
+# TODO
 
 # %% [markdown]
 # ## Experimento 2.4 - Busca de indivíduos, dada uma lista de SNPs
 # Dada uma lista de marcadores, deseja-se buscar todos os animais que os
 # possuem, nos diferentes tipos dearquivos.
 
-# %% [markdown]
-# ### Utilizando biblioteca snpdb para busca de indivíduos
-
 # %%
-snp = np.random.choice(snpdb.find_snp(), size=1)
-inds = snpdb.find_individuals_of_snps(id=snp[0]['i'])
-pp(inds)
+df_melted = pd.melt(df[df['experiment_id'].str.startswith('2')],
+                    id_vars=[
+                        'experiment_id', 'compression_method', 'file_type',
+                        'nsnps', 'nsamples'
+                    ],
+                    value_vars=['individuals_of_snps'])
+sns.set(style="whitegrid",
+        palette=sns.color_palette("muted", n_colors=6, desat=1.0))
+snsplot = sns.lmplot(data=df_melted,
+                     y='value',
+                     x='nsamples',
+                     row='file_type',
+                     col='compression_method',
+                     col_order=['snappy', 'zlib'],
+                     hue='nsnps',
+                     order=1,
+                     height=8,
+                     aspect=1,
+                     legend_out=False,
+                     truncate=False,
+                     sharex=True,
+                     sharey=False)
+
+# # Labelling points of graph
+# for idx, g in enumerate(snsplot.axes[0]):
+#     file_type = {0: '0125', 1: 'VCF'}[idx]
+#     df_tmp = df_melted[df_melted['file_type'] == file_type]
+#     for row_idx, row in df_tmp.loc[:, ['value', 'nsamples']].iterrows():
+#         x = row['nsamples'] * 0.6
+#         y = row['value'] + 0.05 * df_tmp['value'].max()
+#         label = "{:.3f}".format(row['value'])
+#         g.text(x, y, label)
+
+# snsplot._legend.set_title("Tipo de arquivo")
+# snsplot.set(xscale='log')
+# snsplot.set(yscale='log')
+snsplot = snsplot.set_axis_labels(
+    "# de amostras", "Tempo de execução (s)"
+).set_titles(
+    template="Tipo de arquivo = {row_name}; Método de compressão = {col_name}")
+snsplot.savefig(graph_dir + 'experiment2_1_times.png')
+plt.draw()
 
 # %% [markdown]
 # ## Experimento 2.5 - Exportação de indivíduos para formatos originais
 # - Em progresso
 
 # %%
+# TODO
 
 # %% [markdown]
 # ## Experimento 2.6 - Remoção de todos os dados de um indivíduo
 # Dada uma lista de indivíduos, remover todos os dados associados
 
-# %% [markdown]
-# ### Utilizando biblioteca snpdb para deleção
-
 # %%
-ind = np.random.choice(inds, size=1)[0]
-delete_results = snpdb.delete_individuals(id=ind['_id'])
-pp(delete_results)
-print("Deleted counts: ", end='')
-pp([i.deleted_count for i in delete_results])
+df_melted = pd.melt(df[df['experiment_id'].str.startswith('2')],
+                    id_vars=[
+                        'experiment_id', 'compression_method', 'file_type',
+                        'nsnps', 'nsamples'
+                    ],
+                    value_vars=['delete_individual'])
+sns.set(style="whitegrid",
+        palette=sns.color_palette("muted", n_colors=6, desat=1.0))
+snsplot = sns.lmplot(data=df_melted,
+                     y='value',
+                     x='nsamples',
+                     row='file_type',
+                     col='compression_method',
+                     col_order=['snappy', 'zlib'],
+                     hue='nsnps',
+                     order=1,
+                     height=8,
+                     aspect=1,
+                     legend_out=False,
+                     truncate=False,
+                     sharex=True,
+                     sharey=False)
+
+# # Labelling points of graph
+# for idx, g in enumerate(snsplot.axes[0]):
+#     file_type = {0: '0125', 1: 'VCF'}[idx]
+#     df_tmp = df_melted[df_melted['file_type'] == file_type]
+#     for row_idx, row in df_tmp.loc[:, ['value', 'nsamples']].iterrows():
+#         x = row['nsamples'] * 0.6
+#         y = row['value'] + 0.05 * df_tmp['value'].max()
+#         label = "{:.3f}".format(row['value'])
+#         g.text(x, y, label)
+
+# snsplot._legend.set_title("Tipo de arquivo")
+# snsplot.set(xscale='log')
+# snsplot.set(yscale='log')
+snsplot = snsplot.set_axis_labels(
+    "# de amostras", "Tempo de execução (s)"
+).set_titles(
+    template="Tipo de arquivo = {row_name}; Método de compressão = {col_name}")
+snsplot.savefig(graph_dir + 'experiment2_1_times.png')
+plt.draw()
 
 # %% [markdown]
 # ## Experimento 2.7 - Comparação de importação/exportação no modo “bruto”
@@ -419,5 +600,6 @@ pp([i.deleted_count for i in delete_results])
 # 2.1
 
 # %%
+# TODO
 
 # %%
