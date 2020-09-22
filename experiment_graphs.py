@@ -618,7 +618,7 @@ df_melted = pd.melt(df[df['experiment_id'].isin(
                         'experiment_id', 'compression_method', 'file_type',
                         'nsnps', 'nsamples'
                     ],
-                    value_vars=['time'])
+                    value_vars=['fsize', 'dbsize'])
 sns.set(style="whitegrid",
         palette=sns.color_palette("muted", n_colors=6, desat=1.0))
 snsplot = sns.catplot(
@@ -638,6 +638,55 @@ snsplot = snsplot.set_axis_labels("Método de compressão",
                                   "Tempo de execução log10 (s)")
 # .set_titles(template="Método de compressão: {row_name} - {col_name}")
 snsplot.savefig(graph_dir + 'experiment2_7_times.png')
+plt.draw()
+
+# %% [markdown]
+# ### Comparação de tamanhos de arquivos antes/depois das inserções (100k SNPs)
+
+# %%
+df_melted = pd.melt(df[df['experiment_id'].isin(
+    ['2.A', '2.7'])][df['nsnps'] == 100000.0][df['nsamples'] == 10000.0],
+                    id_vars=[
+                        'experiment_id', 'compression_method', 'file_type',
+                        'nsnps', 'nsamples'
+                    ],
+                    value_vars=['fsize', 'dbsize'])
+df_melted['value'] /= 1024**2
+sns.set(style="whitegrid",
+        palette=sns.color_palette("muted", n_colors=6, desat=1.0))
+snsplot = sns.catplot(
+    x='compression_method',
+    y='value',
+    hue='variable',
+    data=df_melted,
+    col='experiment_id',
+    kind='bar',
+    height=8,
+    aspect=1,
+)
+
+# Labelling bars of graph
+for idx, g in enumerate(snsplot.axes[0]):
+    e_id = {0: '2.A', 1: '2.7'}[idx]
+    df_tmp = df_melted[df_melted['experiment_id'] == e_id]
+    for i, compression_method in enumerate(
+            df_tmp['compression_method'].unique()):
+        for j, variable in enumerate(df_tmp['variable'].unique()):
+            x = i - 0.35 + (j * (0.8 / 2.0))
+            y = df_tmp[df_tmp['compression_method'] == compression_method][
+                df_tmp['variable'] == variable]['value'].mean() * 1.01
+            label = "{:.2f}".format(
+                df_tmp[df_tmp['compression_method'] == compression_method][
+                    df_tmp['variable'] == variable]['value'].mean())
+            g.text(x, y, label)
+
+snsplot._legend.set_title("")
+# snsplot.set(xscale='log')
+snsplot.set(yscale='log')
+snsplot = snsplot.set_axis_labels("Método de compressão",
+                                  "Tamanho do arquivo log10 (MB)").set_titles(
+                                      template="{col_var} = {col_name}", )
+snsplot.savefig(graph_dir + 'experiment2_7_sizes.png')
 plt.draw()
 
 # %%
