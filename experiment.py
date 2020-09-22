@@ -567,11 +567,12 @@ def execute_experiment_bin_file(result: dict,
 # ## 1.A - Arquivo 0125
 # ## 1.B - Arquivo PLINK
 # ## 2.A - Arquivo 0125
+# ## 2.C - Arquivo PLINK
 
 # %%
 # ? Execute experiment only if not exists in results
 # ? Grouping experiments with similar formats
-experiment_ids: set = {'1.A', '1.B', '2.A'}
+experiment_ids: set = {'1.A', '1.B', '2.A', '2.C'}
 for experiment_id in experiment_ids:
     if experiment_id.startswith('1'):
         N = 10  # Performing experiments with N loops

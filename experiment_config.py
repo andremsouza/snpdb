@@ -204,6 +204,34 @@ exps: dict = {
     '2.C': {
         'compression_methods': {'snappy', 'zlib'},
         'file_type':
+        'PLINK',
+        'nsnps_list': [100000.0, 1000000.0],
+        'nsamples_list': [
+            1.0,
+            5.0,
+            10.0,
+            50.0,
+            100.0,
+            500.0,
+            1000.0,
+            5000.0,
+            10000.0,
+            50000.0,
+            100000.0,
+        ],  # , 1000000.0],
+        'readers': {
+            'map': readers.PlinkMapReader,
+            'ped': readers.PlinkSampleReader
+        },
+        'file_extensions': {
+            'map': '.plmap',
+            'ped': '.plped',
+            'ids': '.plids'
+        },
+    },
+    '2.D': {
+        'compression_methods': {'snappy', 'zlib'},
+        'file_type':
         'ALL',
         'nsnps_list': [100000.0, 1000000.0],
         'nsamples_list': [
