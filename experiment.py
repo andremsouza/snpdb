@@ -706,7 +706,7 @@ def execute_experiment_all(result: dict,
                             id_map[sample] = individual
                 t_tmp = time.time()
                 snpdb.import_samples(
-                    sample_reader=exps[experiment_id]['readers'][k]['ext'](
+                    sample_reader=exps[experiment_id]['readers'][k]['ped'](
                         fnames[k]),
                     map_name=experiment_id + '_' + nsnps_id + '_' +
                     nsamples_id + '_' + k,
