@@ -176,8 +176,8 @@ def execute_experiment_two_files(result: dict,
 
         # Appending generated file sizes
         result['fsize'].append(
-            (float(os.stat(mfname).st_size) + float(os.stat(pfname).st_size)) *
-            n_blocks)
+            float(os.stat(mfname).st_size) +
+            float(os.stat(pfname).st_size) * n_blocks)
         # Appending stored document sizes from MongoDB
         result['dbsize'].append(map_size + sample_size)
         # Appending insertion times
@@ -1016,7 +1016,7 @@ for experiment_id in experiment_ids:
 experiment_ids = {'1.G', '2.D'}
 for experiment_id in experiment_ids:
     if experiment_id.startswith('1'):
-        N = 10  # Performing experiments with N loops
+        N = 1  # Performing experiments with N loops
     else:
         N = 1  # Only 1 loop for experiments 2.*
     # file_type = exps[experiment_id]['file_type']
