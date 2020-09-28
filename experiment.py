@@ -5,17 +5,16 @@
 # ## Imports e inicialização
 
 # %%
-from experiment_config import data_dir, fastq_dir_1, fastq_dir_2
+from experiment_config import data_dir, fastq_dir_1
 from experiment_config import results_fname, exps, nsnps_ids, nsamples_ids
 from experiment_config import reset_db, generate_random_file
 import json
 import numpy as np
 import os
 from PIL import Image
-from pprint import pprint
 import snpdb
 import time
-# import writers
+import writers
 
 # Import existing results
 results: dict = {}
@@ -23,15 +22,16 @@ try:
     with open(results_fname, 'r') as f:
         results = json.load(f)
 except Exception:
+    print("Warning: Couldn't load existing results file.")
     results = {}
 
 # Verifying existing files
-print('Directory:', data_dir)
-pprint(os.listdir(data_dir))
-print('Directory:', fastq_dir_1)
-pprint(os.listdir(fastq_dir_1))
-print('Directory:', fastq_dir_2)
-pprint(os.listdir(fastq_dir_2))
+# print('Directory:', data_dir)
+# pprint(os.listdir(data_dir))
+# print('Directory:', fastq_dir_1)
+# pprint(os.listdir(fastq_dir_1))
+# print('Directory:', fastq_dir_2)
+# pprint(os.listdir(fastq_dir_2))
 
 # %% [markdown]
 # ## Definição de funções
@@ -184,6 +184,7 @@ def execute_experiment_two_files(result: dict,
         result['time'].append(t_map + t_sample)
 
         # Executing additional steps
+        print("Executing additional steps...")
 
         # 2.2 Sumarização
         ind = np.random.choice(snpdb.find_individuals())
@@ -384,6 +385,7 @@ def execute_experiment_one_file(result: dict,
         result['time'].append(t_map + t_sample)
 
         # Executing additional steps
+        print("Executing additional steps...")
 
         # 2.2 Sumarização
         ind = np.random.choice(snpdb.find_individuals())
@@ -580,6 +582,8 @@ def execute_experiment_all(result: dict,
     result['summarize'] = []  # summarization example and time
     result['individuals_of_snps'] = []
     result['delete_individual'] = []
+    result['export'] = []
+    result['export_bin'] = []
 
     # * Performing experiment N times and storing results
     for i in range(N):
@@ -732,6 +736,7 @@ def execute_experiment_all(result: dict,
             t_bin += t_tmp
 
         # Validating statistics
+        print("Validating statistics...")
         snpdb._db.command("validate", snpdb._config["MAPS_COLL"], full=True)
         snpdb._db.command("validate", snpdb._config["MAPSNPS_COLL"], full=True)
         snpdb._db.command("validate", snpdb._config["SNPS_COLL"], full=True)
@@ -774,6 +779,7 @@ def execute_experiment_all(result: dict,
         result['time'].append(t_map + t_sample + t_bin)
 
         # Executing additional steps
+        print("Executing additional steps...")
 
         # 2.2 Sumarização
         ind = np.random.choice(snpdb.find_individuals())
@@ -786,7 +792,41 @@ def execute_experiment_all(result: dict,
             'time': t_tmp
         })
 
-        # TODO: 2.3 Exportação de sumarização para formatos originais
+        # 2.3 Exportação de sumarização para formatos originais
+        try:
+            export: dict = {}
+            export['Z125'] = {}
+            export['PLINK'] = {}
+            ind_map = result['summarize'][-1]['individual']['samples'][-1][
+                'map']
+            samples = [
+                sample['id']
+                for sample in result['summarize'][-1]['individual']['samples']
+                if sample['map'] == ind_map
+            ]
+            t_tmp = time.time()
+            snpdb.export_map(ind_map, writers.Z125MapWriter,
+                             data_dir + 'ind_export.0125map')
+            t_tmp = time.time() - t_tmp
+            export['Z125']['map'] = t_tmp
+            t_tmp = time.time()
+            snpdb.export_samples(samples, ind_map, writers.Z125SampleWriter,
+                                 data_dir + 'ind_export.0125ped')
+            t_tmp = time.time() - t_tmp
+            export['Z125']['samples'] = t_tmp
+            t_tmp = time.time()
+            snpdb.export_map(ind_map, writers.PlinkMapWriter,
+                             data_dir + 'ind_export.plmap')
+            t_tmp = time.time() - t_tmp
+            export['PLINK']['map'] = t_tmp
+            t_tmp = time.time()
+            snpdb.export_samples(samples, ind_map, writers.PlinkSampleWriter,
+                                 data_dir + 'ind_export.plped')
+            t_tmp = time.time() - t_tmp
+            export['PLINK']['samples'] = t_tmp
+            result['export'].append(export)
+        except IndexError as e:
+            print("Warning: individual has no map/samples", e)
 
         # 2.4 Busca de indivíduos, dada uma lista de SNPs
         snp = np.random.choice(snpdb.find_snp())
@@ -802,7 +842,15 @@ def execute_experiment_all(result: dict,
         t_tmp = time.time() - t_tmp
         result['individuals_of_snps'][-1]['snp'] = t_tmp
 
-        # TODO: 2.5 Exportação de indivíduos para formatos originais
+        # 2.5 Exportação de dados brutos/binários
+        try:
+            db_files = snpdb.list_files()
+            t_tmp = time.time()
+            snpdb.get_files(db_files)
+            t_tmp = time.time() - t_tmp
+            result['export_bin'].append(t_tmp)
+        except Exception as e:
+            print(e)
 
         # 2.6 Remoção de todos os dados de um indivíduo
         ind = np.random.choice(snpdb.find_individuals())
