@@ -637,7 +637,7 @@ def execute_experiment_all(result: dict,
                                      start_samples_from_id=start_sample)
                 # Id map file
                 generate_random_file(filename=ifnames[k],
-                                     file_type='ids',
+                                     file_type='.ids',
                                      verbose=True,
                                      n=nsamples_block,
                                      first_sample_id=start_sample)
@@ -667,7 +667,7 @@ def execute_experiment_all(result: dict,
                                      start_from_id=start_sample)
                 # Id map file
                 generate_random_file(filename=ifnames[k],
-                                     file_type='ids',
+                                     file_type='.ids',
                                      verbose=True,
                                      n=nsamples_block,
                                      first_sample_id=start_sample)
