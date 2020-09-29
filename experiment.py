@@ -918,7 +918,7 @@ def execute_experiment_all(result: dict,
 # %%
 # ? Execute experiment only if not exists in results
 # ? Grouping experiments with similar formats
-experiment_ids: set = {'1.A', '1.B', '2.A', '2.C'}
+experiment_ids: list = ['1.A', '1.B', '2.A', '2.C']
 for experiment_id in experiment_ids:
     if experiment_id.startswith('1'):
         N = 10  # Performing experiments with N loops
@@ -954,7 +954,7 @@ for experiment_id in experiment_ids:
 # %%
 # ? Execute experiment only if not exists in results
 # ? Grouping experiments with similar formats
-experiment_ids = {'1.C', '1.D', '2.B'}
+experiment_ids = ['1.C', '1.D', '2.B']
 for experiment_id in experiment_ids:
     if experiment_id.startswith('1'):
         N = 10  # Performing experiments with N loops
@@ -989,7 +989,7 @@ for experiment_id in experiment_ids:
 # %%
 # ? Execute experiment only if not exists in results
 # ? Grouping experiments with similar formats
-experiment_ids = {'1.E', '1.F'}
+experiment_ids = ['1.E', '1.F']
 for experiment_id in experiment_ids:
     if experiment_id.startswith('1'):
         N = 10  # Performing experiments with N loops
@@ -1013,7 +1013,7 @@ for experiment_id in experiment_ids:
 # %%
 # ? Execute experiment only if not exists in results
 # ? Grouping experiments with similar formats
-experiment_ids = {'1.G', '2.D'}
+experiment_ids = ['1.G', '2.D']
 for experiment_id in experiment_ids:
     if experiment_id.startswith('1'):
         N = 1  # Performing experiments with N loops
