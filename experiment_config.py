@@ -323,7 +323,7 @@ nsamples_ids: dict = {
     500000.0: '500k',
     1000000.0: '1m',
 }
-bin_file_types: set = {'FastQ', 'Media', 'ALL'}
+bin_file_types: set = {'FastQ', 'Media'}
 
 
 def reset_db(compression_method: str) -> None:

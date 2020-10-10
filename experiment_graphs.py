@@ -26,7 +26,9 @@ except Exception:
 # Storing data in a Pandas DataFrame
 col_names: list = [
     'experiment_id', 'compression_method', 'file_type', 'nsnps', 'nsamples',
-    'fsize', 'dbsize', 'time'
+    'fsize', 'dbsize', 'time', 'summarize', 'individuals_of_snps',
+    'delete_individual', 'export_time_0125', 'export_time_plink',
+    'export_time_bin'
 ]
 df: pd.DataFrame = pd.DataFrame(columns=col_names)
 
@@ -58,6 +60,9 @@ for experiment_id in exps:
                 summarize_times: list = []
                 individuals_of_snps_times: list = []
                 delete_individual_times: list = []
+                export_time_0125: list = []
+                export_time_plink: list = []
+                export_time_bin: list = []
                 if exps[experiment_id]['file_type'] in bin_file_types:
                     fsizes = results[experiment_id][compression_method][
                         'fsize']
@@ -67,6 +72,9 @@ for experiment_id in exps:
                     summarize_times = [0.0] * len(fsizes)
                     individuals_of_snps_times = [0.0] * len(fsizes)
                     delete_individual_times = [0.0] * len(fsizes)
+                    export_time_0125 = [0.0] * len(fsizes)
+                    export_time_plink = [0.0] * len(fsizes)
+                    export_time_bin = [0.0] * len(fsizes)
                 elif experiment_id == '2.7':
                     fsizes = results[experiment_id][compression_method][
                         nsnps_id][nsamples_id]['fsize']
@@ -77,6 +85,9 @@ for experiment_id in exps:
                     summarize_times = [0.0] * len(fsizes)
                     individuals_of_snps_times = [0.0] * len(fsizes)
                     delete_individual_times = [0.0] * len(fsizes)
+                    export_time_0125 = [0.0] * len(fsizes)
+                    export_time_plink = [0.0] * len(fsizes)
+                    export_time_bin = [0.0] * len(fsizes)
                 else:
                     fsizes = results[experiment_id][compression_method][
                         nsnps_id][nsamples_id]['fsize']
@@ -103,6 +114,26 @@ for experiment_id in exps:
                         for ind in results[experiment_id][compression_method]
                         [nsnps_id][nsamples_id]['delete_individual']
                     ]
+                    if exps[experiment_id]['file_type'] == 'ALL':
+                        export_time_0125 = [
+                            i['Z125']['map'] + i['Z125']['samples']
+                            for i in results[experiment_id][compression_method]
+                            [nsnps_id][nsamples_id]['export']
+                        ]
+                        export_time_plink = [
+                            i['PLINK']['map'] + i['PLINK']['samples']
+                            for i in results[experiment_id][compression_method]
+                            [nsnps_id][nsamples_id]['export']
+                        ]
+                        export_time_bin = [
+                            i
+                            for i in results[experiment_id][compression_method]
+                            [nsnps_id][nsamples_id]['export_bin']
+                        ]
+                    else:
+                        export_time_0125 = [0.0] * len(fsizes)
+                        export_time_plink = [0.0] * len(fsizes)
+                        export_time_bin = [0.0] * len(fsizes)
 
                 # Mounting rows and appending to DataFrame
                 rows = [{
@@ -116,10 +147,14 @@ for experiment_id in exps:
                     'time': float(k),
                     'summarize': float(l),
                     'individuals_of_snps': float(m),
-                    'delete_individual': float(n)
-                } for i, j, k, l, m, n in zip(
+                    'delete_individual': float(n),
+                    'export_time_0125': float(o),
+                    'export_time_plink': float(p),
+                    'export_time_bin': float(q)
+                } for i, j, k, l, m, n, o, p, q in zip(
                     fsizes, dbsizes, times, summarize_times,
-                    individuals_of_snps_times, delete_individual_times)]
+                    individuals_of_snps_times, delete_individual_times,
+                    export_time_0125, export_time_plink, export_time_bin)]
                 df = df.append(rows, ignore_index=True, verify_integrity=True)
 
 # %% [markdown]
@@ -308,6 +343,7 @@ plt.draw()
 # Analisando performance considerando os casos com menor e maior tempo de
 # importação da seção 1
 # - Caso menor: 0125
+# - Caso médio: PLINK
 # - Caso maior: VCF
 
 # %% [markdown]
@@ -409,8 +445,7 @@ df_melted = df_melted[df_melted['nsnps'] == 1000000.0]
 df_melted['value'] /= 1024**2
 sns.set(style="whitegrid",
         palette=sns.color_palette("muted", n_colors=6, desat=1.0))
-snsplot = sns.lmplot(data=df_melted[df_melted['variable'].isin(
-    ['fsize', 'dbsize'])],
+snsplot = sns.lmplot(data=df_melted,
                      y='value',
                      x='nsamples',
                      hue='variable',
@@ -490,15 +525,45 @@ snsplot = snsplot.set_axis_labels(
     "# de amostras", "Tempo de execução (s)"
 ).set_titles(
     template="Tipo de arquivo = {row_name}; Método de compressão = {col_name}")
-snsplot.savefig(graph_dir + 'experiment2_1_times.png')
+snsplot.savefig(graph_dir + 'experiment2_summarize_times.png')
 plt.draw()
 
 # %% [markdown]
-# ## Experimento 2.3 - Exportação de sumarização para formatos originais
-# - Em progresso
+# ## Experimento 2.3 - Exportação de dados para formatos originais
+# - Exportação de um par mapa/amostra de um indivíduo, escolhido
+# aleatóriamente, para os formatos 0125 e PLINK.
 
 # %%
-# TODO
+df_melted = pd.melt(df[df['file_type'] == 'ALL'],
+                    id_vars=[
+                        'experiment_id', 'compression_method', 'file_type',
+                        'nsnps', 'nsamples'
+                    ],
+                    value_vars=['export_time_0125', 'export_time_plink'])
+# df_melted = df_melted[df_melted['nsnps'] == 1000000.0]
+sns.set(style="whitegrid",
+        palette=sns.color_palette("muted", n_colors=6, desat=1.0))
+snsplot = sns.lmplot(data=df_melted,
+                     y='value',
+                     x='nsamples',
+                     hue='variable',
+                     row='nsnps',
+                     col='compression_method',
+                     col_order=['snappy', 'zlib'],
+                     order=1,
+                     height=8,
+                     aspect=1,
+                     legend_out=True,
+                     truncate=False,
+                     sharex=True,
+                     sharey=False)
+snsplot._legend.set_title("")
+# snsplot.set(xscale='log')
+snsplot = snsplot.set_axis_labels(
+    "# de amostras", "Tempo de execução (s)").set_titles(
+        template="# de SNPs = {row_name}; Método de compressão = {col_name}")
+snsplot.savefig(graph_dir + 'experiment2_export_times.png')
+plt.draw()
 
 # %% [markdown]
 # ## Experimento 2.4 - Busca de indivíduos, dada uma lista de SNPs
@@ -527,7 +592,7 @@ snsplot = sns.lmplot(data=df_melted,
                      legend_out=False,
                      truncate=False,
                      sharex=True,
-                     sharey=False)
+                     sharey=True)
 
 # # Labelling points of graph
 # for idx, g in enumerate(snsplot.axes[0]):
@@ -546,15 +611,46 @@ snsplot = snsplot.set_axis_labels(
     "# de amostras", "Tempo de execução (s)"
 ).set_titles(
     template="Tipo de arquivo = {row_name}; Método de compressão = {col_name}")
-snsplot.savefig(graph_dir + 'experiment2_1_times.png')
+snsplot.savefig(graph_dir + 'experiment2_indiv_search_times.png')
 plt.draw()
 
 # %% [markdown]
-# ## Experimento 2.5 - Exportação de indivíduos para formatos originais
-# - Em progresso
+# ## Experimento 2.5 - Exportação de dados brutos/binários
+# - Exportação de todos os arquivos armazenados em modo "bruto" de um indivíduo
+# aleatoriamente selecionado.
+# - Para cada experimento, é armazena um arquivo FastQ e um arquivo de mídia.
 
 # %%
-# TODO
+df_melted = pd.melt(df[df['file_type'] == 'ALL'],
+                    id_vars=[
+                        'experiment_id', 'compression_method', 'file_type',
+                        'nsnps', 'nsamples'
+                    ],
+                    value_vars=['export_time_bin'])
+# df_melted = df_melted[df_melted['nsnps'] == 1000000.0]
+sns.set(style="whitegrid",
+        palette=sns.color_palette("muted", n_colors=6, desat=1.0))
+snsplot = sns.lmplot(data=df_melted,
+                     y='value',
+                     x='nsamples',
+                     hue='variable',
+                     row='nsnps',
+                     col='compression_method',
+                     col_order=['snappy', 'zlib'],
+                     order=1,
+                     height=8,
+                     aspect=1,
+                     legend_out=True,
+                     truncate=False,
+                     sharex=True,
+                     sharey=True)
+snsplot._legend.set_title("")
+# snsplot.set(xscale='log')
+snsplot = snsplot.set_axis_labels(
+    "# de amostras", "Tempo de execução (s)").set_titles(
+        template="# de SNPs = {row_name}; Método de compressão = {col_name}")
+snsplot.savefig(graph_dir + 'experiment2_export_times.png')
+plt.draw()
 
 # %% [markdown]
 # ## Experimento 2.6 - Remoção de todos os dados de um indivíduo
@@ -601,7 +697,7 @@ snsplot = snsplot.set_axis_labels(
     "# de amostras", "Tempo de execução (s)"
 ).set_titles(
     template="Tipo de arquivo = {row_name}; Método de compressão = {col_name}")
-snsplot.savefig(graph_dir + 'experiment2_1_times.png')
+snsplot.savefig(graph_dir + 'experiment2_remove_times.png')
 plt.draw()
 
 # %% [markdown]
