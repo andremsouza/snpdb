@@ -158,6 +158,10 @@ for experiment_id in exps:
                 df = df.append(rows, ignore_index=True, verify_integrity=True)
 
 # %% [markdown]
+# #### Criando colunas concatenadas
+df['file_type_nsnps'] = df['file_type'].map(str) + '_' + df['nsnps'].map(str)
+
+# %% [markdown]
 # ## Experimento 1 - Tempo de importação/espaço ocupado a partir da base zerada
 # - Para cada tipo de arquivo, foram medidos os tempos de execução para
 # inserção, levando em consideração arquivos com 100 mil e 1 milhão de
@@ -188,6 +192,10 @@ df_melted = pd.melt(df[df['experiment_id'].str.startswith('1')],
                     ],
                     value_vars=['time'])
 df_melted = df_melted.fillna(value='Binary file')
+df_melted['nsnps'][df_melted['nsnps'] == 1000000] = nsnps_ids[float(1000000)]
+df_melted['nsnps'][df_melted['nsnps'] == 100000] = nsnps_ids[float(100000)]
+# df_melted['nsnps'] = df_melted['nsnps'].str.replace('1000000', '1m')
+# df_melted['nsnps'] = df_melted['nsnps'].str.replace('100000', '100k')
 sns.set(style="whitegrid",
         palette=sns.color_palette("muted", n_colors=6, desat=1.0))
 snsplot = sns.catplot(
@@ -232,7 +240,7 @@ snsplot.savefig(graph_dir + 'experiment1_times.png')
 plt.draw()
 
 # %% [markdown]
-# ### Comparação de tamanhos de arquivos antes/depois das inserções (100k SNPs)
+# ### Comparação de tamanhos de arquivos antes/depois das inserções
 
 # %%
 df_melted = pd.melt(df[df['experiment_id'].str.startswith('1')],
@@ -241,8 +249,11 @@ df_melted = pd.melt(df[df['experiment_id'].str.startswith('1')],
                         'nsnps', 'nsamples'
                     ],
                     value_vars=['fsize', 'dbsize'])
-df_melted = df_melted.fillna(
-    value='Binary file')[~df_melted['nsnps'].isin([1000000.0])]
+df_melted = df_melted.fillna(value='bin')
+df_melted['variable'] = df_melted['variable'].map(
+    str) + '_' + df_melted['nsnps'].map(str)
+df_melted['variable'] = df_melted['variable'].str.replace(
+    '100000.0', '100k').str.replace('1000000.0', '1m')
 df_melted['value'] /= 1024**2
 sns.set(style="whitegrid",
         palette=sns.color_palette("muted", n_colors=6, desat=1.0))
@@ -250,6 +261,10 @@ snsplot = sns.catplot(
     x='file_type',
     y='value',
     hue='variable',
+    hue_order=[
+        'fsize_100k', 'dbsize_100k', 'fsize_1m', 'dbsize_1m', 'fsize_bin',
+        'dbsize_bin'
+    ],
     data=df_melted,
     col='compression_method',
     col_order=['snappy', 'zlib'],
@@ -260,73 +275,23 @@ snsplot = sns.catplot(
 
 # Labelling bars of graph
 for idx, g in enumerate(snsplot.axes[0]):
-    c_method = {0: 'snappy', 1: 'zlib'}[idx]
-    df_tmp = df_melted[df_melted['compression_method'] == c_method]
-    for i, file_type in enumerate(df_tmp['file_type'].unique()):
-        for j, variable in enumerate(df_tmp['variable'].unique()):
-            x = i - 0.35 + (j * (0.8 / 2.0))
-            y = df_tmp[df_tmp['file_type'] == file_type][
-                df_tmp['variable'] == variable]['value'].mean() * 1.1
-            label = "{:.2f}".format(df_tmp[df_tmp['file_type'] == file_type][
-                df_tmp['variable'] == variable]['value'].mean())
-            g.text(x, y, label)
+    for p in g.patches:
+        if not np.isnan(p.get_height()):
+            g.text(p.get_x() + p.get_width() / 2.,
+                   p.get_height(),
+                   '%.1f' % float(p.get_height()),
+                   fontsize=8,
+                   color='black',
+                   ha='center',
+                   va='bottom')
 
-snsplot._legend.set_title("")
+snsplot._legend.set_title("size_nsnps")
 # snsplot.set(xscale='log')
 snsplot.set(yscale='log')
-snsplot = snsplot.set_axis_labels(
-    "Tipo de arquivo", "Tamanho do arquivo log10 (MB)").set_titles(
-        template=" 100k SNPs - {col_var} = {col_name}", )
-snsplot.savefig(graph_dir + 'experiment1_sizes_100k.png')
-plt.draw()
-
-# %% [markdown]
-# ### Comparação de tamanhos de arquivos antes/depois das inserções (1m SNPs)
-
-# %%
-df_melted = pd.melt(df[df['experiment_id'].str.startswith('1')],
-                    id_vars=[
-                        'experiment_id', 'compression_method', 'file_type',
-                        'nsnps', 'nsamples'
-                    ],
-                    value_vars=['fsize', 'dbsize'])
-df_melted = df_melted.fillna(
-    value='Binary file')[~df_melted['nsnps'].isin([100000.0])]
-df_melted['value'] /= 1024**2
-sns.set(style="whitegrid",
-        palette=sns.color_palette("muted", n_colors=6, desat=1.0))
-snsplot = sns.catplot(
-    x='file_type',
-    y='value',
-    hue='variable',
-    data=df_melted,
-    col='compression_method',
-    col_order=['snappy', 'zlib'],
-    kind='bar',
-    height=8,
-    aspect=1,
-)
-
-# Labelling bars of graph
-for idx, g in enumerate(snsplot.axes[0]):
-    c_method = {0: 'snappy', 1: 'zlib'}[idx]
-    df_tmp = df_melted[df_melted['compression_method'] == c_method]
-    for i, file_type in enumerate(df_tmp['file_type'].unique()):
-        for j, variable in enumerate(df_tmp['variable'].unique()):
-            x = i - 0.35 + (j * (0.8 / 2.0))
-            y = df_tmp[df_tmp['file_type'] == file_type][
-                df_tmp['variable'] == variable]['value'].mean() * 1.1
-            label = "{:.2f}".format(df_tmp[df_tmp['file_type'] == file_type][
-                df_tmp['variable'] == variable]['value'].mean())
-            g.text(x, y, label)
-
-snsplot._legend.set_title("")
-# snsplot.set(xscale='log')
-snsplot.set(yscale='log')
-snsplot = snsplot.set_axis_labels(
-    "Tipo de arquivo", "Tamanho do arquivo log10 (MB)").set_titles(
-        template=" 1m SNPs - {col_var} = {col_name}", )
-snsplot.savefig(graph_dir + 'experiment1_sizes_1m.png')
+snsplot = snsplot.set_axis_labels("Tipo de arquivo",
+                                  "Tamanho do arquivo log10 (MB)").set_titles(
+                                      template="{col_var} = {col_name}", )
+snsplot.savefig(graph_dir + 'experiment1_sizes.png')
 plt.draw()
 
 # %% [markdown]
@@ -347,7 +312,7 @@ plt.draw()
 # - Caso maior: VCF
 
 # %% [markdown]
-# ### Tempos de execução
+# ### Tempos de importação
 
 # %%
 df_melted = pd.melt(df[df['experiment_id'].str.startswith('2')],
@@ -358,43 +323,59 @@ df_melted = pd.melt(df[df['experiment_id'].str.startswith('2')],
                     value_vars=['time'])
 sns.set(style="whitegrid",
         palette=sns.color_palette("muted", n_colors=6, desat=1.0))
-snsplot = sns.lmplot(data=df_melted,
-                     y='value',
-                     x='nsamples',
-                     row='file_type',
-                     col='compression_method',
-                     col_order=['snappy', 'zlib'],
-                     hue='nsnps',
-                     order=1,
-                     height=8,
-                     aspect=1,
-                     legend_out=False,
-                     truncate=False,
-                     sharex=True,
-                     sharey=False)
 
-# # Labelling points of graph
-# for idx, g in enumerate(snsplot.axes[0]):
-#     file_type = {0: '0125', 1: 'VCF'}[idx]
-#     df_tmp = df_melted[df_melted['file_type'] == file_type]
-#     for row_idx, row in df_tmp.loc[:, ['value', 'nsamples']].iterrows():
-#         x = row['nsamples'] * 0.6
-#         y = row['value'] + 0.05 * df_tmp['value'].max()
-#         label = "{:.3f}".format(row['value'])
-#         g.text(x, y, label)
+fig, ax = plt.subplots(1, 2, sharex=True, sharey=True, figsize=(16, 9))
+ax[0].set_xscale('log')
+ax[0].set_yscale('log')
+sns.lineplot(data=df_melted[df['compression_method'] == 'snappy'],
+             x='nsamples',
+             y='value',
+             hue='file_type',
+             hue_order=['0125', 'PLINK', 'VCF', 'ALL'],
+             palette='tab10',
+             style='nsnps',
+             ci=None,
+             legend='full',
+             figure=fig,
+             ax=ax[0])
+sns.lineplot(data=df_melted[df['compression_method'] == 'zlib'],
+             x='nsamples',
+             y='value',
+             hue='file_type',
+             hue_order=['0125', 'PLINK', 'VCF', 'ALL'],
+             palette='tab10',
+             style='nsnps',
+             ci=None,
+             legend='full',
+             figure=fig,
+             ax=ax[1])
 
-# snsplot._legend.set_title("Tipo de arquivo")
-# snsplot.set(xscale='log')
-# snsplot.set(yscale='log')
-snsplot = snsplot.set_axis_labels(
-    "# de amostras", "Tempo de execução (s)"
-).set_titles(
-    template="Tipo de arquivo = {row_name}; Método de compressão = {col_name}")
-snsplot.savefig(graph_dir + 'experiment2_1_times.png')
+ax[0].set_title('compression_method = snappy')
+ax[1].set_title('compression_method = zlib')
+ax[0].set_xlabel('# de amostras (log10)')
+ax[1].set_xlabel('# de amostras (log10)')
+ax[0].set_ylabel('Tempo de importação (log10) (s)')
+ax[1].set_ylabel('Tempo de importação (log10) (s)')
+
+for idx, g in enumerate(ax):
+    c_methods = {0: 'snappy', 1: 'zlib'}
+    for nsnps in df_melted['nsnps'].unique():
+        for file_type in df_melted['file_type'].unique():
+            df_tmp = df_melted[df_melted['file_type'] == file_type][
+                df_melted['compression_method'] == c_methods[idx]][
+                    df_melted['nsnps'] == nsnps]
+            g.text(df_tmp['nsamples'].max(),
+                   df_tmp['value'].max(),
+                   '%.1f' % float(df_tmp['value'].max()),
+                   fontsize=8,
+                   color='black',
+                   ha='center',
+                   va='bottom')
+fig.savefig(graph_dir + 'experiment2_1_times.png')
 plt.draw()
 
 # %% [markdown]
-# ### Tamanhos de arquivos antes e depois da inserção (100k SNPs)
+# ### Tamanhos de arquivos antes e depois da inserção (100k)
 
 # %%
 df_melted = pd.melt(df[df['experiment_id'].str.startswith('2')],
@@ -403,36 +384,70 @@ df_melted = pd.melt(df[df['experiment_id'].str.startswith('2')],
                         'nsnps', 'nsamples'
                     ],
                     value_vars=['fsize', 'dbsize'])
+df_melted = df_melted.fillna(value='bin')
 df_melted = df_melted[df_melted['nsnps'] == 100000.0]
+# df_melted['variable'] = df_melted['variable'].map(
+#     str) + '_' + df_melted['nsnps'].map(str)
+# df_melted['variable'] = df_melted['variable'].str.replace(
+#     '100000.0', '100k').str.replace('1000000.0', '1m')
 df_melted['value'] /= 1024**2
 sns.set(style="whitegrid",
         palette=sns.color_palette("muted", n_colors=6, desat=1.0))
-snsplot = sns.lmplot(data=df_melted[df_melted['variable'].isin(
-    ['fsize', 'dbsize'])],
-                     y='value',
-                     x='nsamples',
-                     hue='variable',
-                     row='file_type',
-                     col='compression_method',
-                     col_order=['snappy', 'zlib'],
-                     order=1,
-                     height=8,
-                     aspect=1,
-                     legend_out=True,
-                     truncate=False,
-                     sharex=True,
-                     sharey=False)
-snsplot._legend.set_title("")
-# snsplot.set(xscale='log')
-snsplot = snsplot.set_axis_labels(
-    "# de amostras", "Tamanho do arquivo (MB)"
-).set_titles(
-    template="Tipo de arquivo = {row_name}; Método de compressão = {col_name}")
-snsplot.savefig(graph_dir + 'experiment2_1_sizes_100k.png')
+
+fig, ax = plt.subplots(1, 2, sharex=True, sharey=True, figsize=(16, 9))
+ax[0].set_xscale('log')
+ax[0].set_yscale('log')
+sns.lineplot(data=df_melted[df['compression_method'] == 'snappy'],
+             x='nsamples',
+             y='value',
+             hue='file_type',
+             hue_order=['0125', 'PLINK', 'VCF', 'ALL'],
+             palette='tab10',
+             style='variable',
+             style_order=['fsize', 'dbsize'],
+             ci=None,
+             legend='full',
+             figure=fig,
+             ax=ax[0])
+sns.lineplot(data=df_melted[df['compression_method'] == 'zlib'],
+             x='nsamples',
+             y='value',
+             hue='file_type',
+             hue_order=['0125', 'PLINK', 'VCF', 'ALL'],
+             palette='tab10',
+             style='variable',
+             style_order=['fsize', 'dbsize'],
+             ci=None,
+             legend='full',
+             figure=fig,
+             ax=ax[1])
+
+ax[0].set_title('compression_method = snappy')
+ax[1].set_title('compression_method = zlib')
+ax[0].set_xlabel('# de amostras (log10)')
+ax[1].set_xlabel('# de amostras (log10)')
+ax[0].set_ylabel('Tamanho (log10) (MB)')
+ax[1].set_ylabel('Tamanho (log10) (MB)')
+
+# for idx, g in enumerate(ax):
+#     c_methods = {0: 'snappy', 1: 'zlib'}
+#     for nsnps in df_melted['nsnps'].unique():
+#         for file_type in df_melted['file_type'].unique():
+#             df_tmp = df_melted[df_melted['file_type'] == file_type][
+#                 df_melted['compression_method'] == c_methods[idx]][
+#                     df_melted['nsnps'] == nsnps]
+#             g.text(df_tmp['nsamples'].max(),
+#                    df_tmp['value'].max(),
+#                    '%.1f' % float(df_tmp['value'].max()),
+#                    fontsize=8,
+#                    color='black',
+#                    ha='center',
+#                    va='bottom')
+fig.savefig(graph_dir + 'experiment2_1_sizes_100k.png')
 plt.draw()
 
 # %% [markdown]
-# ### Tamanhos de arquivos antes e depois da inserção (1m SNPs)
+# ### Tamanhos de arquivos antes e depois da inserção (1m)
 
 # %%
 df_melted = pd.melt(df[df['experiment_id'].str.startswith('2')],
@@ -441,31 +456,66 @@ df_melted = pd.melt(df[df['experiment_id'].str.startswith('2')],
                         'nsnps', 'nsamples'
                     ],
                     value_vars=['fsize', 'dbsize'])
+df_melted = df_melted.fillna(value='bin')
 df_melted = df_melted[df_melted['nsnps'] == 1000000.0]
+# df_melted['variable'] = df_melted['variable'].map(
+#     str) + '_' + df_melted['nsnps'].map(str)
+# df_melted['variable'] = df_melted['variable'].str.replace(
+#     '100000.0', '100k').str.replace('1000000.0', '1m')
 df_melted['value'] /= 1024**2
 sns.set(style="whitegrid",
         palette=sns.color_palette("muted", n_colors=6, desat=1.0))
-snsplot = sns.lmplot(data=df_melted,
-                     y='value',
-                     x='nsamples',
-                     hue='variable',
-                     row='file_type',
-                     col='compression_method',
-                     col_order=['snappy', 'zlib'],
-                     order=1,
-                     height=8,
-                     aspect=1,
-                     legend_out=True,
-                     truncate=False,
-                     sharex=True,
-                     sharey=False)
-snsplot._legend.set_title("")
-# snsplot.set(xscale='log')
-snsplot = snsplot.set_axis_labels(
-    "# de amostras", "Tamanho do arquivo (MB)"
-).set_titles(
-    template="Tipo de arquivo = {row_name}; Método de compressão = {col_name}")
-snsplot.savefig(graph_dir + 'experiment2_1_sizes_1m.png')
+
+fig, ax = plt.subplots(1, 2, sharex=True, sharey=True, figsize=(16, 9))
+ax[0].set_xscale('log')
+ax[0].set_yscale('log')
+sns.lineplot(data=df_melted[df['compression_method'] == 'snappy'],
+             x='nsamples',
+             y='value',
+             hue='file_type',
+             hue_order=['0125', 'PLINK', 'VCF', 'ALL'],
+             palette='tab10',
+             style='variable',
+             style_order=['fsize', 'dbsize'],
+             ci=None,
+             legend='full',
+             figure=fig,
+             ax=ax[0])
+sns.lineplot(data=df_melted[df['compression_method'] == 'zlib'],
+             x='nsamples',
+             y='value',
+             hue='file_type',
+             hue_order=['0125', 'PLINK', 'VCF', 'ALL'],
+             palette='tab10',
+             style='variable',
+             style_order=['fsize', 'dbsize'],
+             ci=None,
+             legend='full',
+             figure=fig,
+             ax=ax[1])
+
+ax[0].set_title('compression_method = snappy')
+ax[1].set_title('compression_method = zlib')
+ax[0].set_xlabel('# de amostras (log10)')
+ax[1].set_xlabel('# de amostras (log10)')
+ax[0].set_ylabel('Tamanho (log10) (MB)')
+ax[1].set_ylabel('Tamanho (log10) (MB)')
+
+# for idx, g in enumerate(ax):
+#     c_methods = {0: 'snappy', 1: 'zlib'}
+#     for nsnps in df_melted['nsnps'].unique():
+#         for file_type in df_melted['file_type'].unique():
+#             df_tmp = df_melted[df_melted['file_type'] == file_type][
+#                 df_melted['compression_method'] == c_methods[idx]][
+#                     df_melted['nsnps'] == nsnps]
+#             g.text(df_tmp['nsamples'].max(),
+#                    df_tmp['value'].max(),
+#                    '%.1f' % float(df_tmp['value'].max()),
+#                    fontsize=8,
+#                    color='black',
+#                    ha='center',
+#                    va='bottom')
+fig.savefig(graph_dir + 'experiment2_1_sizes_1m.png')
 plt.draw()
 
 # %% [markdown]
@@ -493,39 +543,55 @@ df_melted = pd.melt(df[df['experiment_id'].str.startswith('2')],
                     value_vars=['summarize'])
 sns.set(style="whitegrid",
         palette=sns.color_palette("muted", n_colors=6, desat=1.0))
-snsplot = sns.lmplot(data=df_melted,
-                     y='value',
-                     x='nsamples',
-                     row='file_type',
-                     col='compression_method',
-                     col_order=['snappy', 'zlib'],
-                     hue='nsnps',
-                     order=1,
-                     height=8,
-                     aspect=1,
-                     legend_out=False,
-                     truncate=False,
-                     sharex=True,
-                     sharey=False)
 
-# # Labelling points of graph
-# for idx, g in enumerate(snsplot.axes[0]):
-#     file_type = {0: '0125', 1: 'VCF'}[idx]
-#     df_tmp = df_melted[df_melted['file_type'] == file_type]
-#     for row_idx, row in df_tmp.loc[:, ['value', 'nsamples']].iterrows():
-#         x = row['nsamples'] * 0.6
-#         y = row['value'] + 0.05 * df_tmp['value'].max()
-#         label = "{:.3f}".format(row['value'])
-#         g.text(x, y, label)
+fig, ax = plt.subplots(1, 2, sharex=True, sharey=True, figsize=(16, 9))
+ax[0].set_xscale('log')
+ax[0].set_yscale('log')
+sns.lineplot(data=df_melted[df['compression_method'] == 'snappy'],
+             x='nsamples',
+             y='value',
+             hue='file_type',
+             hue_order=['0125', 'PLINK', 'VCF', 'ALL'],
+             palette='tab10',
+             style='nsnps',
+             ci=None,
+             legend='full',
+             figure=fig,
+             ax=ax[0])
+sns.lineplot(data=df_melted[df['compression_method'] == 'zlib'],
+             x='nsamples',
+             y='value',
+             hue='file_type',
+             hue_order=['0125', 'PLINK', 'VCF', 'ALL'],
+             palette='tab10',
+             style='nsnps',
+             ci=None,
+             legend='full',
+             figure=fig,
+             ax=ax[1])
 
-# snsplot._legend.set_title("Tipo de arquivo")
-# snsplot.set(xscale='log')
-# snsplot.set(yscale='log')
-snsplot = snsplot.set_axis_labels(
-    "# de amostras", "Tempo de execução (s)"
-).set_titles(
-    template="Tipo de arquivo = {row_name}; Método de compressão = {col_name}")
-snsplot.savefig(graph_dir + 'experiment2_summarize_times.png')
+ax[0].set_title('compression_method = snappy')
+ax[1].set_title('compression_method = zlib')
+ax[0].set_xlabel('# de amostras (log10)')
+ax[1].set_xlabel('# de amostras (log10)')
+ax[0].set_ylabel('Tempo de execução (log10) (s)')
+ax[1].set_ylabel('Tempo de execução (log10) (s)')
+
+for idx, g in enumerate(ax):
+    c_methods = {0: 'snappy', 1: 'zlib'}
+    for nsnps in df_melted['nsnps'].unique():
+        for file_type in df_melted['file_type'].unique():
+            df_tmp = df_melted[df_melted['file_type'] == file_type][
+                df_melted['compression_method'] == c_methods[idx]][
+                    df_melted['nsnps'] == nsnps]
+            g.text(df_tmp['nsamples'].max(),
+                   df_tmp['value'].max(),
+                   '%.1f' % float(df_tmp['value'].max()),
+                   fontsize=8,
+                   color='black',
+                   ha='center',
+                   va='bottom')
+fig.savefig(graph_dir + 'experiment2_summarize_times.png')
 plt.draw()
 
 # %% [markdown]
@@ -540,29 +606,55 @@ df_melted = pd.melt(df[df['file_type'] == 'ALL'],
                         'nsnps', 'nsamples'
                     ],
                     value_vars=['export_time_0125', 'export_time_plink'])
-# df_melted = df_melted[df_melted['nsnps'] == 1000000.0]
 sns.set(style="whitegrid",
         palette=sns.color_palette("muted", n_colors=6, desat=1.0))
-snsplot = sns.lmplot(data=df_melted,
-                     y='value',
-                     x='nsamples',
-                     hue='variable',
-                     row='nsnps',
-                     col='compression_method',
-                     col_order=['snappy', 'zlib'],
-                     order=1,
-                     height=8,
-                     aspect=1,
-                     legend_out=True,
-                     truncate=False,
-                     sharex=True,
-                     sharey=False)
-snsplot._legend.set_title("")
-# snsplot.set(xscale='log')
-snsplot = snsplot.set_axis_labels(
-    "# de amostras", "Tempo de execução (s)").set_titles(
-        template="# de SNPs = {row_name}; Método de compressão = {col_name}")
-snsplot.savefig(graph_dir + 'experiment2_export_times.png')
+
+fig, ax = plt.subplots(1, 2, sharex=True, sharey=True, figsize=(16, 9))
+# ax[0].set_xscale('log')
+# ax[0].set_yscale('log')
+sns.lineplot(data=df_melted[df['compression_method'] == 'snappy'],
+             x='nsamples',
+             y='value',
+             hue='variable',
+             palette='tab10',
+             style='nsnps',
+             ci=None,
+             legend='full',
+             figure=fig,
+             ax=ax[0])
+sns.lineplot(data=df_melted[df['compression_method'] == 'zlib'],
+             x='nsamples',
+             y='value',
+             hue='variable',
+             palette='tab10',
+             style='nsnps',
+             ci=None,
+             legend='full',
+             figure=fig,
+             ax=ax[1])
+
+ax[0].set_title('compression_method = snappy')
+ax[1].set_title('compression_method = zlib')
+ax[0].set_xlabel('# de amostras')
+ax[1].set_xlabel('# de amostras')
+ax[0].set_ylabel('Tempo de execução (s)')
+ax[1].set_ylabel('Tempo de execução (s)')
+
+# for idx, g in enumerate(ax):
+#     c_methods = {0: 'snappy', 1: 'zlib'}
+#     for nsnps in df_melted['nsnps'].unique():
+#         for file_type in df_melted['file_type'].unique():
+#             df_tmp = df_melted[df_melted['file_type'] == file_type][
+#                 df_melted['compression_method'] == c_methods[idx]][
+#                     df_melted['nsnps'] == nsnps]
+#             g.text(df_tmp['nsamples'].max(),
+#                    df_tmp['value'].max(),
+#                    '%.1f' % float(df_tmp['value'].max()),
+#                    fontsize=8,
+#                    color='black',
+#                    ha='center',
+#                    va='bottom')
+fig.savefig(graph_dir + 'experiment2_export_times.png')
 plt.draw()
 
 # %% [markdown]
@@ -579,39 +671,55 @@ df_melted = pd.melt(df[df['experiment_id'].str.startswith('2')],
                     value_vars=['individuals_of_snps'])
 sns.set(style="whitegrid",
         palette=sns.color_palette("muted", n_colors=6, desat=1.0))
-snsplot = sns.lmplot(data=df_melted,
-                     y='value',
-                     x='nsamples',
-                     row='file_type',
-                     col='compression_method',
-                     col_order=['snappy', 'zlib'],
-                     hue='nsnps',
-                     order=1,
-                     height=8,
-                     aspect=1,
-                     legend_out=False,
-                     truncate=False,
-                     sharex=True,
-                     sharey=True)
 
-# # Labelling points of graph
-# for idx, g in enumerate(snsplot.axes[0]):
-#     file_type = {0: '0125', 1: 'VCF'}[idx]
-#     df_tmp = df_melted[df_melted['file_type'] == file_type]
-#     for row_idx, row in df_tmp.loc[:, ['value', 'nsamples']].iterrows():
-#         x = row['nsamples'] * 0.6
-#         y = row['value'] + 0.05 * df_tmp['value'].max()
-#         label = "{:.3f}".format(row['value'])
-#         g.text(x, y, label)
+fig, ax = plt.subplots(1, 2, sharex=True, sharey=True, figsize=(16, 9))
+ax[0].set_xscale('log')
+ax[0].set_yscale('log')
+sns.lineplot(data=df_melted[df['compression_method'] == 'snappy'],
+             x='nsamples',
+             y='value',
+             hue='file_type',
+             hue_order=['0125', 'PLINK', 'VCF', 'ALL'],
+             palette='tab10',
+             style='nsnps',
+             ci=None,
+             legend='full',
+             figure=fig,
+             ax=ax[0])
+sns.lineplot(data=df_melted[df['compression_method'] == 'zlib'],
+             x='nsamples',
+             y='value',
+             hue='file_type',
+             hue_order=['0125', 'PLINK', 'VCF', 'ALL'],
+             palette='tab10',
+             style='nsnps',
+             ci=None,
+             legend='full',
+             figure=fig,
+             ax=ax[1])
 
-# snsplot._legend.set_title("Tipo de arquivo")
-# snsplot.set(xscale='log')
-# snsplot.set(yscale='log')
-snsplot = snsplot.set_axis_labels(
-    "# de amostras", "Tempo de execução (s)"
-).set_titles(
-    template="Tipo de arquivo = {row_name}; Método de compressão = {col_name}")
-snsplot.savefig(graph_dir + 'experiment2_indiv_search_times.png')
+ax[0].set_title('compression_method = snappy')
+ax[1].set_title('compression_method = zlib')
+ax[0].set_xlabel('# de amostras (log10)')
+ax[1].set_xlabel('# de amostras (log10)')
+ax[0].set_ylabel('Tempo de execução (log10) (s)')
+ax[1].set_ylabel('Tempo de execução (log10) (s)')
+
+for idx, g in enumerate(ax):
+    c_methods = {0: 'snappy', 1: 'zlib'}
+    for nsnps in df_melted['nsnps'].unique():
+        for file_type in df_melted['file_type'].unique():
+            df_tmp = df_melted[df_melted['file_type'] == file_type][
+                df_melted['compression_method'] == c_methods[idx]][
+                    df_melted['nsnps'] == nsnps]
+            g.text(df_tmp['nsamples'].max(),
+                   df_tmp['value'].max(),
+                   '%.1f' % float(df_tmp['value'].max()),
+                   fontsize=8,
+                   color='black',
+                   ha='center',
+                   va='bottom')
+fig.savefig(graph_dir + 'experiment2_indiv_search_times.png')
 plt.draw()
 
 # %% [markdown]
@@ -627,29 +735,53 @@ df_melted = pd.melt(df[df['file_type'] == 'ALL'],
                         'nsnps', 'nsamples'
                     ],
                     value_vars=['export_time_bin'])
-# df_melted = df_melted[df_melted['nsnps'] == 1000000.0]
 sns.set(style="whitegrid",
         palette=sns.color_palette("muted", n_colors=6, desat=1.0))
-snsplot = sns.lmplot(data=df_melted,
-                     y='value',
-                     x='nsamples',
-                     hue='variable',
-                     row='nsnps',
-                     col='compression_method',
-                     col_order=['snappy', 'zlib'],
-                     order=1,
-                     height=8,
-                     aspect=1,
-                     legend_out=True,
-                     truncate=False,
-                     sharex=True,
-                     sharey=True)
-snsplot._legend.set_title("")
-# snsplot.set(xscale='log')
-snsplot = snsplot.set_axis_labels(
-    "# de amostras", "Tempo de execução (s)").set_titles(
-        template="# de SNPs = {row_name}; Método de compressão = {col_name}")
-snsplot.savefig(graph_dir + 'experiment2_export_times.png')
+
+fig, ax = plt.subplots(1, 2, sharex=True, sharey=True, figsize=(16, 9))
+# ax[0].set_xscale('log')
+# ax[0].set_yscale('log')
+sns.lineplot(data=df_melted[df['compression_method'] == 'snappy'],
+             x='nsamples',
+             y='value',
+             hue='nsnps',
+             palette='tab10',
+             ci=None,
+             legend='full',
+             figure=fig,
+             ax=ax[0])
+sns.lineplot(data=df_melted[df['compression_method'] == 'zlib'],
+             x='nsamples',
+             y='value',
+             hue='nsnps',
+             palette='tab10',
+             ci=None,
+             legend='full',
+             figure=fig,
+             ax=ax[1])
+
+ax[0].set_title('compression_method = snappy')
+ax[1].set_title('compression_method = zlib')
+ax[0].set_xlabel('# de amostras')
+ax[1].set_xlabel('# de amostras')
+ax[0].set_ylabel('Tempo de execução (s)')
+ax[1].set_ylabel('Tempo de execução (s)')
+
+for idx, g in enumerate(ax):
+    c_methods = {0: 'snappy', 1: 'zlib'}
+    for nsnps in df_melted['nsnps'].unique():
+        for file_type in df_melted['file_type'].unique():
+            df_tmp = df_melted[df_melted['file_type'] == file_type][
+                df_melted['compression_method'] == c_methods[idx]][
+                    df_melted['nsnps'] == nsnps]
+            g.text(df_tmp['nsamples'].max(),
+                   df_tmp['value'].max(),
+                   '%.1f' % float(df_tmp['value'].max()),
+                   fontsize=8,
+                   color='black',
+                   ha='center',
+                   va='bottom')
+fig.savefig(graph_dir + 'experiment2_export_times.png')
 plt.draw()
 
 # %% [markdown]
@@ -665,39 +797,55 @@ df_melted = pd.melt(df[df['experiment_id'].str.startswith('2')],
                     value_vars=['delete_individual'])
 sns.set(style="whitegrid",
         palette=sns.color_palette("muted", n_colors=6, desat=1.0))
-snsplot = sns.lmplot(data=df_melted,
-                     y='value',
-                     x='nsamples',
-                     row='file_type',
-                     col='compression_method',
-                     col_order=['snappy', 'zlib'],
-                     hue='nsnps',
-                     order=1,
-                     height=8,
-                     aspect=1,
-                     legend_out=False,
-                     truncate=False,
-                     sharex=True,
-                     sharey=False)
 
-# # Labelling points of graph
-# for idx, g in enumerate(snsplot.axes[0]):
-#     file_type = {0: '0125', 1: 'VCF'}[idx]
-#     df_tmp = df_melted[df_melted['file_type'] == file_type]
-#     for row_idx, row in df_tmp.loc[:, ['value', 'nsamples']].iterrows():
-#         x = row['nsamples'] * 0.6
-#         y = row['value'] + 0.05 * df_tmp['value'].max()
-#         label = "{:.3f}".format(row['value'])
-#         g.text(x, y, label)
+fig, ax = plt.subplots(1, 2, sharex=True, sharey=True, figsize=(16, 9))
+ax[0].set_xscale('log')
+ax[0].set_yscale('log')
+sns.lineplot(data=df_melted[df['compression_method'] == 'snappy'],
+             x='nsamples',
+             y='value',
+             hue='file_type',
+             hue_order=['0125', 'PLINK', 'VCF', 'ALL'],
+             palette='tab10',
+             style='nsnps',
+             ci=None,
+             legend='full',
+             figure=fig,
+             ax=ax[0])
+sns.lineplot(data=df_melted[df['compression_method'] == 'zlib'],
+             x='nsamples',
+             y='value',
+             hue='file_type',
+             hue_order=['0125', 'PLINK', 'VCF', 'ALL'],
+             palette='tab10',
+             style='nsnps',
+             ci=None,
+             legend='full',
+             figure=fig,
+             ax=ax[1])
 
-# snsplot._legend.set_title("Tipo de arquivo")
-# snsplot.set(xscale='log')
-# snsplot.set(yscale='log')
-snsplot = snsplot.set_axis_labels(
-    "# de amostras", "Tempo de execução (s)"
-).set_titles(
-    template="Tipo de arquivo = {row_name}; Método de compressão = {col_name}")
-snsplot.savefig(graph_dir + 'experiment2_remove_times.png')
+ax[0].set_title('compression_method = snappy')
+ax[1].set_title('compression_method = zlib')
+ax[0].set_xlabel('# de amostras (log10)')
+ax[1].set_xlabel('# de amostras (log10)')
+ax[0].set_ylabel('Tempo de execução (log10) (s)')
+ax[1].set_ylabel('Tempo de execução (log10) (s)')
+
+# for idx, g in enumerate(ax):
+#     c_methods = {0: 'snappy', 1: 'zlib'}
+#     for nsnps in df_melted['nsnps'].unique():
+#         for file_type in df_melted['file_type'].unique():
+#             df_tmp = df_melted[df_melted['file_type'] == file_type][
+#                 df_melted['compression_method'] == c_methods[idx]][
+#                     df_melted['nsnps'] == nsnps]
+#             g.text(df_tmp['nsamples'].max(),
+#                    df_tmp['value'].max(),
+#                    '%.1f' % float(df_tmp['value'].max()),
+#                    fontsize=8,
+#                    color='black',
+#                    ha='center',
+#                    va='bottom')
+fig.savefig(graph_dir + 'experiment2_remove_times.png')
 plt.draw()
 
 # %% [markdown]
@@ -784,5 +932,15 @@ snsplot = snsplot.set_axis_labels("Método de compressão",
                                       template="{col_var} = {col_name}", )
 snsplot.savefig(graph_dir + 'experiment2_7_sizes.png')
 plt.draw()
+
+# %%
+
+# %%
+
+# %%
+
+# %%
+
+# %%
 
 # %%
