@@ -780,8 +780,6 @@ snsplot = sns.catplot(
     data=df_melted,
     col="experiment_id",
     kind="bar",
-    height=8,
-    aspect=1,
 )
 
 # Labelling bars of graph
