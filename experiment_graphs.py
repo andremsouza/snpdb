@@ -240,6 +240,7 @@ snsplot = sns.catplot(
     # col_order=["zlib"],
     kind="bar",
     legend_out=False,
+    height=6,
 )
 
 snsplot._legend.set_title("# SNPs")
@@ -283,6 +284,7 @@ snsplot = sns.catplot(
     data=df_melted,
     kind="bar",
     legend_out=False,
+    height=6,
 )
 
 snsplot._legend.set_title("size_nsnps")
@@ -321,7 +323,7 @@ df_melted = pd.melt(
     value_vars=["time"],
 )
 sns.set(style="whitegrid", palette=sns.color_palette("muted", n_colors=6, desat=1.0))
-fig = plt.figure()
+fig = plt.figure(figsize=(6.4, 6.4))
 ax = sns.lineplot(
     data=df_melted,
     x="nsamples",
@@ -376,7 +378,7 @@ df_melted = df_melted[df_melted["nsnps"] == 100000.0]
 df_melted["value"] /= 1024 ** 2
 sns.set(style="whitegrid", palette=sns.color_palette("muted", n_colors=6, desat=1.0))
 
-fig = plt.figure()
+fig = plt.figure(figsize=(6.4, 6.4))
 ax = sns.lineplot(
     data=df_melted,
     x="nsamples",
@@ -432,7 +434,7 @@ df_melted = df_melted[df_melted["nsnps"] == 1000000.0]
 df_melted["value"] /= 1024 ** 2
 sns.set(style="whitegrid", palette=sns.color_palette("muted", n_colors=6, desat=1.0))
 
-fig = plt.figure()
+fig = plt.figure(figsize=(6.4, 6.4))
 ax = sns.lineplot(
     data=df_melted,
     x="nsamples",
@@ -494,7 +496,7 @@ df_melted = pd.melt(
 )
 sns.set(style="whitegrid", palette=sns.color_palette("muted", n_colors=6, desat=1.0))
 
-fig = plt.figure()
+fig = plt.figure(figsize=(6.4, 6.4))
 ax = sns.lineplot(
     data=df_melted,
     x="nsamples",
@@ -544,7 +546,7 @@ df_melted = pd.melt(
 )
 sns.set(style="whitegrid", palette=sns.color_palette("muted", n_colors=6, desat=1.0))
 
-fig = plt.figure()
+fig = plt.figure(figsize=(6.4, 6.4))
 ax = sns.lineplot(
     data=df_melted,
     x="nsamples",
@@ -593,7 +595,7 @@ df_melted = pd.melt(
 )
 sns.set(style="whitegrid", palette=sns.color_palette("muted", n_colors=6, desat=1.0))
 
-fig = plt.figure()
+fig = plt.figure(figsize=(6.4, 6.4))
 ax = sns.lineplot(
     data=df_melted,
     x="nsamples",
@@ -644,7 +646,7 @@ df_melted = pd.melt(
 )
 sns.set(style="whitegrid", palette=sns.color_palette("muted", n_colors=6, desat=1.0))
 
-fig = plt.figure()
+fig = plt.figure(figsize=(6.4, 6.4))
 ax = sns.lineplot(
     data=df_melted,
     x="nsamples",
@@ -691,7 +693,7 @@ df_melted = pd.melt(
 )
 sns.set(style="whitegrid", palette=sns.color_palette("muted", n_colors=6, desat=1.0))
 
-fig = plt.figure()
+fig = plt.figure(figsize=(6.4, 6.4))
 ax = sns.lineplot(
     data=df_melted,
     x="nsamples",
