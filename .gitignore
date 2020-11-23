@@ -9,6 +9,5 @@ mongodb_data/*
 *.out
 *.log
 *.json
-*.png
 *.ipynb
 *.html
