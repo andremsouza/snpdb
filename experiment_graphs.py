@@ -538,45 +538,25 @@ plt.draw()
 
 # %%
 df_melted = pd.melt(
-    df[df["file_type"] == "ALL"],
-    id_vars=["experiment_id", "compression_method", "file_type", "nsnps", "nsamples"],
-    value_vars=["export_time_0125", "export_time_plink"],
+    df[df["file_type"] == "ALL"][df["nsnps"] == 1000000.0],
+    id_vars=["nsamples"],
+    value_vars=["export_time_0125", "export_time_plink", "export_time_bin"],
 )
+df_melted.loc[:, "nsamples"] = df_melted["nsamples"].astype(np.int)
 sns.set(style="whitegrid", palette=sns.color_palette("muted", n_colors=6, desat=1.0))
 
-fig = plt.figure(figsize=(6.4, 6.4))
-ax = sns.lineplot(
-    data=df_melted,
+snsplot = sns.catplot(
     x="nsamples",
     y="value",
     hue="variable",
-    palette="tab10",
-    style="nsnps",
+    data=df_melted,
+    # col="experiment_id",
+    kind="bar",
     ci=None,
-    legend="auto",
-    markers=True,
+    height=6,
 )
 
-# ax.set_xscale('log')
-# ax.set_yscale('log')
-# ax.set_title("compression_method = zlib")
-ax.set_xlabel("# of samples")
-ax.set_ylabel("Execution time (s)")
-
-# for nsnps in df_melted["nsnps"].unique():
-#     for file_type in df_melted["file_type"].unique():
-#         df_tmp = df_melted[df_melted["file_type"] == file_type][
-#             df_melted["nsnps"] == nsnps
-#         ]
-#         ax.text(
-#             df_tmp["nsamples"].max(),
-#             df_tmp["value"].max(),
-#             "%.1f" % float(df_tmp["value"].max()),
-#             fontsize=8,
-#             color="black",
-#             ha="center",
-#             va="bottom",
-#         )
+snsplot = snsplot.set_axis_labels("# of samples", "Execution time (s)")
 fig.savefig(graph_dir + "experiment2_export_times.png")
 plt.draw()
 
@@ -639,43 +619,24 @@ plt.draw()
 # %%
 df_melted = pd.melt(
     df[df["file_type"] == "ALL"],
-    id_vars=["experiment_id", "compression_method", "file_type", "nsnps", "nsamples"],
-    value_vars=["export_time_bin"],
+    id_vars=["nsamples", "nsnps"],
+    value_vars=["export_time_0125", "export_time_plink", "export_time_bin"],
 )
+df_melted.loc[:, "nsamples"] = df_melted["nsamples"].astype(np.int)
 sns.set(style="whitegrid", palette=sns.color_palette("muted", n_colors=6, desat=1.0))
 
-fig = plt.figure(figsize=(6.4, 6.4))
-ax = sns.lineplot(
-    data=df_melted,
+snsplot = sns.catplot(
     x="nsamples",
     y="value",
-    hue="nsnps",
-    palette="tab10",
+    hue="variable",
+    data=df_melted,
+    col="nsnps",
+    kind="bar",
     ci=None,
-    legend="auto",
-    markers=True,
+    height=6,
 )
 
-# ax.set_xscale('log')
-# ax.set_yscale('log')
-# ax.set_title("compression_method = zlib")
-ax.set_xlabel("# of samples")
-ax.set_ylabel("Execution time (s)")
-
-# for nsnps in df_melted["nsnps"].unique():
-#     for file_type in df_melted["file_type"].unique():
-#         df_tmp = df_melted[df_melted["file_type"] == file_type][
-#             df_melted["nsnps"] == nsnps
-#         ]
-#         ax.text(
-#             df_tmp["nsamples"].max(),
-#             df_tmp["value"].max(),
-#             "%.1f" % float(df_tmp["value"].max()),
-#             fontsize=8,
-#             color="black",
-#             ha="center",
-#             va="bottom",
-#         )
+snsplot = snsplot.set_axis_labels("# of samples", "Execution time (s)")
 fig.savefig(graph_dir + "experiment2_export_times_bin.png")
 plt.draw()
 
