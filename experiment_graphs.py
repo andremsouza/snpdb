@@ -226,10 +226,8 @@ df_melted = pd.melt(
     value_vars=["time"],
 )
 df_melted = df_melted.fillna(value="Binary file")
-df_melted["nsnps"][df_melted["nsnps"] == 1000000] = nsnps_ids[float(1000000)]
-df_melted["nsnps"][df_melted["nsnps"] == 100000] = nsnps_ids[float(100000)]
-# df_melted['nsnps'] = df_melted['nsnps'].str.replace('1000000', '1m')
-# df_melted['nsnps'] = df_melted['nsnps'].str.replace('100000', '100k')
+df_melted.loc[df_melted["nsnps"] == 1000000, "nsnps"] = nsnps_ids[float(1000000)]
+df_melted.loc[df_melted["nsnps"] == 100000, "nsnps"] = nsnps_ids[float(100000)]
 sns.set(style="whitegrid", palette=sns.color_palette("muted", n_colors=6, desat=1.0))
 snsplot = sns.catplot(
     x="file_type",
@@ -738,26 +736,28 @@ plt.draw()
 # ### Tempos de execução
 
 # %%
+df["exp_27"] = "logical"
+df.loc[df["experiment_id"] == "2.7", "exp_27"] = "binary"
 df_melted = pd.melt(
     df[df["experiment_id"].isin(["2.A", "2.7"])][df["nsnps"] == 100000.0][
         df["nsamples"] == 10000.0
     ],
-    id_vars=["experiment_id", "compression_method", "file_type", "nsnps", "nsamples"],
-    value_vars=["fsize", "dbsize"],
+    id_vars=["exp_27"],
+    value_vars=["time"],
 )
 sns.set(style="whitegrid", palette=sns.color_palette("muted", n_colors=6, desat=1.0))
 snsplot = sns.catplot(
-    x="experiment_id",
+    x="exp_27",
     y="value",
-    # hue="experiment_id",
     data=df_melted,
     kind="bar",
+    height=6,
 )
 
 # snsplot._legend.set_title("Experimento")
 # snsplot.set(xscale='log')
 # snsplot.set(yscale="log")
-snsplot = snsplot.set_axis_labels("Experiment ID", "Execution time (s)")
+snsplot = snsplot.set_axis_labels("Ingestion mode", "Execution time (s)")
 # .set_titles(template="Método de compressão: {row_name} - {col_name}")
 snsplot.savefig(graph_dir + "experiment2_7_times.png")
 plt.draw()
@@ -766,50 +766,31 @@ plt.draw()
 # ### Comparação de tamanhos de arquivos antes/depois das inserções (100k SNPs)
 
 # %%
+df["exp_27"] = "logical"
+df.loc[df["experiment_id"] == "2.7", "exp_27"] = "binary"
 df_melted = pd.melt(
     df[df["experiment_id"].isin(["2.A", "2.7"])][df["nsnps"] == 100000.0][
         df["nsamples"] == 10000.0
     ],
-    id_vars=["experiment_id", "compression_method", "file_type", "nsnps", "nsamples"],
+    id_vars=["exp_27"],
     value_vars=["fsize", "dbsize"],
 )
 df_melted["value"] /= 1024 ** 2
 sns.set(style="whitegrid", palette=sns.color_palette("muted", n_colors=6, desat=1.0))
 snsplot = sns.catplot(
-    x="compression_method",
+    x="exp_27",
     y="value",
     hue="variable",
     data=df_melted,
-    col="experiment_id",
+    # col="experiment_id",
     kind="bar",
+    height=6,
 )
-
-# Labelling bars of graph
-for idx, g in enumerate(snsplot.axes[0]):
-    e_id = {0: "2.A", 1: "2.7"}[idx]
-    df_tmp = df_melted[df_melted["experiment_id"] == e_id]
-    for i, compression_method in enumerate(df_tmp["compression_method"].unique()):
-        for j, variable in enumerate(df_tmp["variable"].unique()):
-            x = i - 0.35 + (j * (0.8 / 2.0))
-            y = (
-                df_tmp[df_tmp["compression_method"] == compression_method][
-                    df_tmp["variable"] == variable
-                ]["value"].mean()
-                * 1.01
-            )
-            label = "{:.2f}".format(
-                df_tmp[df_tmp["compression_method"] == compression_method][
-                    df_tmp["variable"] == variable
-                ]["value"].mean()
-            )
-            g.text(x, y, label)
 
 snsplot._legend.set_title("")
 # snsplot.set(xscale='log')
 # snsplot.set(yscale="log")
-snsplot = snsplot.set_axis_labels("Compression method", "Size (MB)").set_titles(
-    template="{col_var} = {col_name}",
-)
+snsplot = snsplot.set_axis_labels("Ingestion mode", "Size (MB)")
 snsplot.savefig(graph_dir + "experiment2_7_sizes.png")
 plt.draw()
 
