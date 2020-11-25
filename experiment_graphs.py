@@ -557,7 +557,7 @@ snsplot = sns.catplot(
 )
 
 snsplot = snsplot.set_axis_labels("# of samples", "Execution time (s)")
-plt.savefig(graph_dir + "experiment2_export_times.png")
+snsplot.savefig(graph_dir + "experiment2_export_times.png")
 plt.draw()
 
 # %% [markdown]
@@ -637,7 +637,7 @@ snsplot = sns.catplot(
 )
 
 snsplot = snsplot.set_axis_labels("# of samples", "Execution time (s)")
-plt.savefig(graph_dir + "experiment2_export_times_bin.png")
+snsplot.savefig(graph_dir + "experiment2_export_times_bin.png")
 plt.draw()
 
 # %% [markdown]
