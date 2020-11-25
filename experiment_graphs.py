@@ -395,7 +395,7 @@ ax.set_xscale("log")
 ax.set_yscale("log")
 # ax.set_title("compression_method = zlib")
 ax.set_xlabel("# of samples")
-ax.set_ylabel("Size (MB)")
+ax.set_ylabel("Size (MiB)")
 
 # for nsnps in df_melted["nsnps"].unique():
 #     for file_type in df_melted["file_type"].unique():
@@ -451,7 +451,7 @@ ax.set_xscale("log")
 ax.set_yscale("log")
 # ax.set_title("compression_method = zlib")
 ax.set_xlabel("# of samples")
-ax.set_ylabel("Size (MB)")
+ax.set_ylabel("Size (MiB)")
 
 # for nsnps in df_melted["nsnps"].unique():
 #     for file_type in df_melted["file_type"].unique():
@@ -790,7 +790,7 @@ snsplot = sns.catplot(
 snsplot._legend.set_title("")
 # snsplot.set(xscale='log')
 # snsplot.set(yscale="log")
-snsplot = snsplot.set_axis_labels("Ingestion mode", "Size (MB)")
+snsplot = snsplot.set_axis_labels("Ingestion mode", "Size (MiB)")
 snsplot.savefig(graph_dir + "experiment2_7_sizes.png")
 plt.draw()
 
