@@ -617,10 +617,18 @@ plt.draw()
 # - Para cada experimento, é armazena um arquivo FastQ e um arquivo de mídia.
 
 # %%
+df_tmp = df.rename(
+    columns={
+        "export_time_0125": "0125",
+        "export_time_plink": "PLINK",
+        "export_time_bin": "FastQ_Media",
+    }
+)
 df_melted = pd.melt(
-    df[df["file_type"] == "ALL"],
+    df_tmp[df_tmp["file_type"] == "ALL"],
     id_vars=["nsamples", "nsnps"],
-    value_vars=["export_time_0125", "export_time_plink", "export_time_bin"],
+    value_vars=["0125", "PLINK", "FastQ_Media"],
+    var_name="Format",
 )
 df_melted.loc[:, "nsamples"] = df_melted["nsamples"].astype(np.int)
 sns.set(style="whitegrid", palette=sns.color_palette("muted", n_colors=6, desat=1.0))
@@ -628,7 +636,7 @@ sns.set(style="whitegrid", palette=sns.color_palette("muted", n_colors=6, desat=
 snsplot = sns.catplot(
     x="nsamples",
     y="value",
-    hue="variable",
+    hue="Format",
     data=df_melted,
     col="nsnps",
     kind="bar",
@@ -636,7 +644,10 @@ snsplot = sns.catplot(
     height=6,
 )
 
-snsplot = snsplot.set_axis_labels("# of samples", "Execution time (s)")
+snsplot = snsplot.set_axis_labels(
+    "# of samples (0125, PLINK)", "Execution time (s)"
+).set_titles(template="# of SNPs (0125, PLINK): {col_name}")
+
 snsplot.savefig(graph_dir + "experiment2_export_times_bin.png")
 plt.draw()
 
