@@ -17,6 +17,7 @@ import seaborn as sns
 
 # import snpdb
 
+# %%
 # Import results from output of experiment.py
 results: dict = {}
 try:
@@ -492,6 +493,8 @@ df_melted = pd.melt(
     id_vars=["experiment_id", "compression_method", "file_type", "nsnps", "nsamples"],
     value_vars=["summarize"],
 )
+df_melted.loc[:, "nsnps"].replace(100000.0, "100k", inplace=True)
+df_melted.loc[:, "nsnps"].replace(1000000.0, "1m", inplace=True)
 sns.set(style="whitegrid", palette=sns.color_palette("muted", n_colors=6, desat=1.0))
 
 fig = plt.figure(figsize=(6.4, 6.4))
@@ -511,7 +514,7 @@ ax = sns.lineplot(
 ax.set_xscale("log")
 ax.set_yscale("log")
 # ax.set_title("compression_method = zlib")
-ax.set_xlabel("# of samples")
+ax.set_xlabel("# of samples in the database")
 ax.set_ylabel("Execution time (s)")
 
 # for nsnps in df_melted["nsnps"].unique():
@@ -571,6 +574,8 @@ df_melted = pd.melt(
     id_vars=["experiment_id", "compression_method", "file_type", "nsnps", "nsamples"],
     value_vars=["individuals_of_snps"],
 )
+df_melted.loc[:, "nsnps"].replace(100000.0, "100k", inplace=True)
+df_melted.loc[:, "nsnps"].replace(1000000.0, "1m", inplace=True)
 sns.set(style="whitegrid", palette=sns.color_palette("muted", n_colors=6, desat=1.0))
 
 fig = plt.figure(figsize=(6.4, 6.4))
@@ -590,7 +595,7 @@ ax = sns.lineplot(
 ax.set_xscale("log")
 ax.set_yscale("log")
 # ax.set_title("compression_method = zlib")
-ax.set_xlabel("# of samples")
+ax.set_xlabel("# of samples in the database")
 ax.set_ylabel("Execution time (s)")
 
 # for nsnps in df_melted["nsnps"].unique():
@@ -717,7 +722,7 @@ df_melted = pd.melt(
     id_vars=["exp_27"],
     value_vars=["time"],
 )
-sns.set(style="whitegrid", palette=sns.color_palette("muted", n_colors=6, desat=1.0))
+sns.set(style="whitegrid", palette=sns.color_palette("Paired", n_colors=2, desat=1.0))
 snsplot = sns.catplot(
     x="exp_27",
     y="value",
