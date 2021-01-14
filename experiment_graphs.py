@@ -103,59 +103,63 @@ for experiment_id in exps:
                     export_time_plink = [0.0] * len(fsizes)
                     export_time_bin = [0.0] * len(fsizes)
                 else:
-                    fsizes = results[experiment_id][compression_method][nsnps_id][
-                        nsamples_id
-                    ]["fsize"]
-                    dbsizes = results[experiment_id][compression_method][nsnps_id][
-                        nsamples_id
-                    ]["dbsize"]
-                    times = results[experiment_id][compression_method][nsnps_id][
-                        nsamples_id
-                    ]["time"]
-                    # Getting results values for summarize operation
-                    summarize_times = [
-                        summ["time"]
-                        for summ in results[experiment_id][compression_method][
-                            nsnps_id
-                        ][nsamples_id]["summarize"]
-                    ]
-                    for ind in results[experiment_id][compression_method][nsnps_id][
-                        nsamples_id
-                    ]["individuals_of_snps"]:
-                        try:
-                            # Fix KeyError in results
-                            individuals_of_snps_times.append(float(ind["time"]))
-                        except KeyError:
-                            individuals_of_snps_times.append(float(ind["snp"]))
-                    delete_individual_times = [
-                        ind["time"]
+                    try:
+                        fsizes = results[experiment_id][compression_method][nsnps_id][
+                            nsamples_id
+                        ]["fsize"]
+                        dbsizes = results[experiment_id][compression_method][nsnps_id][
+                            nsamples_id
+                        ]["dbsize"]
+                        times = results[experiment_id][compression_method][nsnps_id][
+                            nsamples_id
+                        ]["time"]
+                        # Getting results values for summarize operation
+                        summarize_times = [
+                            summ["time"]
+                            for summ in results[experiment_id][compression_method][
+                                nsnps_id
+                            ][nsamples_id]["summarize"]
+                        ]
                         for ind in results[experiment_id][compression_method][nsnps_id][
                             nsamples_id
-                        ]["delete_individual"]
-                    ]
-                    if exps[experiment_id]["file_type"] == "ALL":
-                        export_time_0125 = [
-                            i["Z125"]["map"] + i["Z125"]["samples"]
-                            for i in results[experiment_id][compression_method][
+                        ]["individuals_of_snps"]:
+                            try:
+                                # Fix KeyError in results
+                                individuals_of_snps_times.append(float(ind["time"]))
+                            except KeyError:
+                                individuals_of_snps_times.append(float(ind["snp"]))
+                        delete_individual_times = [
+                            ind["time"]
+                            for ind in results[experiment_id][compression_method][
                                 nsnps_id
-                            ][nsamples_id]["export"]
+                            ][nsamples_id]["delete_individual"]
                         ]
-                        export_time_plink = [
-                            i["PLINK"]["map"] + i["PLINK"]["samples"]
-                            for i in results[experiment_id][compression_method][
-                                nsnps_id
-                            ][nsamples_id]["export"]
-                        ]
-                        export_time_bin = [
-                            i
-                            for i in results[experiment_id][compression_method][
-                                nsnps_id
-                            ][nsamples_id]["export_bin"]
-                        ]
-                    else:
-                        export_time_0125 = [0.0] * len(fsizes)
-                        export_time_plink = [0.0] * len(fsizes)
-                        export_time_bin = [0.0] * len(fsizes)
+                        if exps[experiment_id]["file_type"] == "ALL":
+                            export_time_0125 = [
+                                i["Z125"]["map"] + i["Z125"]["samples"]
+                                for i in results[experiment_id][compression_method][
+                                    nsnps_id
+                                ][nsamples_id]["export"]
+                            ]
+                            export_time_plink = [
+                                i["PLINK"]["map"] + i["PLINK"]["samples"]
+                                for i in results[experiment_id][compression_method][
+                                    nsnps_id
+                                ][nsamples_id]["export"]
+                            ]
+                            export_time_bin = [
+                                i
+                                for i in results[experiment_id][compression_method][
+                                    nsnps_id
+                                ][nsamples_id]["export_bin"]
+                            ]
+                        else:
+                            export_time_0125 = [0.0] * len(fsizes)
+                            export_time_plink = [0.0] * len(fsizes)
+                            export_time_bin = [0.0] * len(fsizes)
+                    except Exception as e:
+                        print(e)
+                        continue
 
                 # Mounting rows and appending to DataFrame
                 rows = [
@@ -227,8 +231,10 @@ df_melted = pd.melt(
     value_vars=["time"],
 )
 df_melted = df_melted.fillna(value="Binary file")
+df_melted.loc[df_melted["nsnps"] == 50000000, "nsnps"] = nsnps_ids[float(50000000)]
 df_melted.loc[df_melted["nsnps"] == 1000000, "nsnps"] = nsnps_ids[float(1000000)]
 df_melted.loc[df_melted["nsnps"] == 100000, "nsnps"] = nsnps_ids[float(100000)]
+df_melted = df_melted[df_melted["file_type"] != "Media"]
 sns.set(style="whitegrid", palette=sns.color_palette("muted", n_colors=6, desat=1.0))
 snsplot = sns.catplot(
     x="file_type",
@@ -264,9 +270,13 @@ df_melted["variable"] = (
     df_melted["variable"].map(str) + "_" + df_melted["nsnps"].map(str)
 )
 df_melted["variable"] = (
-    df_melted["variable"].str.replace("100000.0", "100k").str.replace("1000000.0", "1m")
+    df_melted["variable"]
+    .str.replace("100000.0", "100k")
+    .str.replace("1000000.0", "1m")
+    .str.replace("50000000.0", "50m")
 )
 df_melted["value"] /= 1024 ** 2
+df_melted = df_melted[df_melted["file_type"] != "Media"]
 sns.set(style="whitegrid", palette=sns.color_palette("muted", n_colors=6, desat=1.0))
 snsplot = sns.catplot(
     x="file_type",
@@ -472,6 +482,62 @@ fig.savefig(graph_dir + "experiment2_1_sizes_1m.png")
 plt.draw()
 
 # %% [markdown]
+# ### Tamanhos de arquivos antes e depois da inserção (50m)
+
+# %%
+df_melted = pd.melt(
+    df[df["experiment_id"].str.startswith("2")],
+    id_vars=["experiment_id", "compression_method", "file_type", "nsnps", "nsamples"],
+    value_vars=["fsize", "dbsize"],
+)
+df_melted = df_melted.fillna(value="bin")
+df_melted = df_melted[df_melted["nsnps"] == 50000000.0]
+# df_melted['variable'] = df_melted['variable'].map(
+#     str) + '_' + df_melted['nsnps'].map(str)
+# df_melted['variable'] = df_melted['variable'].str.replace(
+#     '100000.0', '100k').str.replace('1000000.0', '1m')
+df_melted["value"] /= 1024 ** 2
+sns.set(style="whitegrid", palette=sns.color_palette("muted", n_colors=6, desat=1.0))
+
+fig = plt.figure(figsize=(6.4, 6.4))
+ax = sns.lineplot(
+    data=df_melted,
+    x="nsamples",
+    y="value",
+    hue="file_type",
+    hue_order=["0125", "PLINK", "VCF", "ALL"],
+    palette="tab10",
+    style="variable",
+    style_order=["fsize", "dbsize"],
+    ci=None,
+    legend="auto",
+    markers=True,
+)
+
+ax.set_xscale("log")
+ax.set_yscale("log")
+# ax.set_title("compression_method = zlib")
+ax.set_xlabel("# of samples")
+ax.set_ylabel("Size (MiB)")
+
+# for nsnps in df_melted["nsnps"].unique():
+#     for file_type in df_melted["file_type"].unique():
+#         df_tmp = df_melted[df_melted["file_type"] == file_type][
+#             df_melted["nsnps"] == nsnps
+#         ]
+#         g.text(
+#             df_tmp["nsamples"].max(),
+#             df_tmp["value"].max(),
+#             "%.1f" % float(df_tmp["value"].max()),
+#             fontsize=8,
+#             color="black",
+#             ha="center",
+#             va="bottom",
+#         )
+fig.savefig(graph_dir + "experiment2_1_sizes_50m.png")
+plt.draw()
+
+# %% [markdown]
 # ### Comentários
 # - Os gráficos são referentes aos resultados do experimento 2.1,
 # i.e., com execuções com 100 mil e 1 milhão de marcadores de SNPs,
@@ -540,10 +606,17 @@ plt.draw()
 # aleatóriamente, para os formatos 0125 e PLINK.
 
 # %%
+df_tmp = df.rename(
+    columns={
+        "export_time_0125": "0125",
+        "export_time_plink": "PLINK",
+        "export_time_bin": "FastQ",
+    }
+)
 df_melted = pd.melt(
-    df[df["file_type"] == "ALL"][df["nsnps"] == 1000000.0],
+    df_tmp[df_tmp["file_type"] == "ALL"][df_tmp["nsnps"] == 1000000.0],
     id_vars=["nsamples"],
-    value_vars=["export_time_0125", "export_time_plink", "export_time_bin"],
+    value_vars=["0125", "PLINK", "FastQ"],
 )
 df_melted.loc[:, "nsamples"] = df_melted["nsamples"].astype(np.int)
 sns.set(style="whitegrid", palette=sns.color_palette("muted", n_colors=6, desat=1.0))
@@ -566,7 +639,7 @@ plt.draw()
 # %% [markdown]
 # ## Experimento 2.4 - Busca de indivíduos, dada uma lista de SNPs
 # Dada uma lista de marcadores, deseja-se buscar todos os animais que os
-# possuem, nos diferentes tipos dearquivos.
+# possuem, nos diferentes tipos de arquivos.
 
 # %%
 df_melted = pd.melt(
@@ -626,13 +699,13 @@ df_tmp = df.rename(
     columns={
         "export_time_0125": "0125",
         "export_time_plink": "PLINK",
-        "export_time_bin": "FastQ_Media",
+        "export_time_bin": "FastQ",
     }
 )
 df_melted = pd.melt(
     df_tmp[df_tmp["file_type"] == "ALL"],
     id_vars=["nsamples", "nsnps"],
-    value_vars=["0125", "PLINK", "FastQ_Media"],
+    value_vars=["0125", "PLINK", "FastQ"],
     var_name="Format",
 )
 df_melted.loc[:, "nsamples"] = df_melted["nsamples"].astype(np.int)

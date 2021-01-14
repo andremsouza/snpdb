@@ -1,3 +1,4 @@
+"""[summary]."""
 # %% [markdown]
 # # Experimentos SNPDB
 
@@ -6,6 +7,7 @@
 
 # %%
 from experiment_config import data_dir, fastq_dir_1
+from experiment_config import phenotype_dir_1, phenotype_dir_2, phenotype_dir_3
 from experiment_config import results_fname, exps, nsnps_ids, nsamples_ids
 from experiment_config import reset_db, generate_random_file
 import json
@@ -19,7 +21,7 @@ import writers
 # Import existing results
 results: dict = {}
 try:
-    with open(results_fname, 'r') as f:
+    with open(results_fname, "r") as f:
         results = json.load(f)
 except Exception:
     print("Warning: Couldn't load existing results file.")
@@ -39,13 +41,16 @@ except Exception:
 # %%
 
 
-def execute_experiment_two_files(result: dict,
-                                 experiment_id: str,
-                                 compression_method: str,
-                                 nsnps: int,
-                                 nsamples: int,
-                                 N: int = 1) -> None:
-    """Executes experiment for file types with two files (map, sample)
+def execute_experiment_two_files(
+    result: dict,
+    experiment_id: str,
+    compression_method: str,
+    nsnps: int,
+    nsamples: int,
+    N: int = 1,
+) -> None:
+    """Execute experiment for file types with two files (map, sample).
+
     Warning: this function uses variables defined outside its scope
 
     Args:
@@ -54,26 +59,32 @@ def execute_experiment_two_files(result: dict,
     """
     nsnps_id = nsnps_ids[nsnps]
     nsamples_id = nsamples_ids[nsamples]
-    print("Starting Experiment " + experiment_id + " (" + nsnps_id +
-          " SNPs, " + nsamples_id + " individuals) with N = " + str(N) +
-          "; Compression method: " + compression_method)
+    print(
+        "Starting Experiment "
+        + experiment_id
+        + " ("
+        + nsnps_id
+        + " SNPs, "
+        + nsamples_id
+        + " individuals) with N = "
+        + str(N)
+        + "; Compression method: "
+        + compression_method
+    )
 
     # get filenames
-    f_ext: dict = exps[experiment_id]['file_extensions']
-    mfname = str(data_dir + 'out_' + nsnps_id + '_' + nsamples_id +
-                 f_ext['map'])
-    pfname = str(data_dir + 'out_' + nsnps_id + '_' + nsamples_id +
-                 f_ext['ped'])
-    ifname = str(data_dir + 'out_' + nsnps_id + '_' + nsamples_id +
-                 f_ext['ids'])
+    f_ext: dict = exps[experiment_id]["file_extensions"]
+    mfname = str(data_dir + "out_" + nsnps_id + "_" + nsamples_id + f_ext["map"])
+    pfname = str(data_dir + "out_" + nsnps_id + "_" + nsamples_id + f_ext["ped"])
+    ifname = str(data_dir + "out_" + nsnps_id + "_" + nsamples_id + f_ext["ids"])
 
     # Setting up result dictionary
-    result['fsize'] = []  # file size
-    result['dbsize'] = []  # doc size in db
-    result['time'] = []  # insertion time
-    result['summarize'] = []  # summarization example and time
-    result['individuals_of_snps'] = []
-    result['delete_individual'] = []
+    result["fsize"] = []  # file size
+    result["dbsize"] = []  # doc size in db
+    result["time"] = []  # insertion time
+    result["summarize"] = []  # summarization example and time
+    result["individuals_of_snps"] = []
+    result["delete_individual"] = []
 
     # * Performing experiment N times and storing results
     for i in range(N):
@@ -89,23 +100,23 @@ def execute_experiment_two_files(result: dict,
         # * Generating input files
         # If less than 10000 samples, generate in one file
         # Else, generate blocks of up to 10000 samples
-        n_blocks: int = int(np.ceil(nsamples / 10000))
+        n_blocks: int = int(np.ceil(nsamples / 1000))
         remaining_samples: int = nsamples
         start_sample: int = 1
         # Map file
-        generate_random_file(filename=mfname,
-                             file_type=f_ext['map'],
-                             verbose=True,
-                             n=nsnps)
+        generate_random_file(
+            filename=mfname, file_type=f_ext["map"], verbose=True, n=nsnps
+        )
         #  start_from_id=start_map)
         # Importing map file
         t_tmp: float = time.time()
         snpdb.import_map(
-            map_reader=exps[experiment_id]['readers']['map'](mfname),
-            map_name=experiment_id + '_' + nsnps_id + '_' + nsamples_id,
+            map_reader=exps[experiment_id]["readers"]["map"](mfname),
+            map_name=experiment_id + "_" + nsnps_id + "_" + nsamples_id,
             force_create_new=True,
             force_use_existing=False,
-            report=False)
+            report=False,
+        )
         t_tmp = time.time() - t_tmp
         t_map += t_tmp
         # Validating statistics
@@ -113,30 +124,40 @@ def execute_experiment_two_files(result: dict,
         snpdb._db.command("validate", snpdb._config["MAPSNPS_COLL"], full=True)
         snpdb._db.command("validate", snpdb._config["SNPS_COLL"], full=True)
         # map_size = _MAPS + _MAPSNPS + _SNPS
-        map_size = snpdb._db.command(
-            "collstats",
-            snpdb._config["MAPS_COLL"])['storageSize'] + snpdb._db.command(
-                "collstats", snpdb.
-                _config["MAPSNPS_COLL"])['storageSize'] + snpdb._db.command(
-                    "collstats", snpdb._config["SNPS_COLL"])['storageSize']
-        print("Imported map file\tTime: " + str(round(t_map, 3)) + "s\tSize:" +
-              str(round(map_size / 1024**2, 2)) + "MB")
+        map_size = (
+            snpdb._db.command("collstats", snpdb._config["MAPS_COLL"])["storageSize"]
+            + snpdb._db.command("collstats", snpdb._config["MAPSNPS_COLL"])[
+                "storageSize"
+            ]
+            + snpdb._db.command("collstats", snpdb._config["SNPS_COLL"])["storageSize"]
+        )
+        print(
+            "Imported map file\tTime: "
+            + str(round(t_map, 3))
+            + "s\tSize:"
+            + str(round(map_size / 1024 ** 2, 2))
+            + "MB"
+        )
         for i in range(n_blocks):
-            print("Block: " + str(i))
-            nsamples_block = int(np.minimum(remaining_samples, 10000.0))
+            print("Block: " + str(i), " T: ", t_sample, "s")
+            nsamples_block = int(np.minimum(remaining_samples, 1000.0))
             # Samples file
-            generate_random_file(filename=pfname,
-                                 file_type=f_ext['ped'],
-                                 verbose=True,
-                                 n=nsamples_block,
-                                 map_size=nsnps,
-                                 start_from_id=start_sample)
+            generate_random_file(
+                filename=pfname,
+                file_type=f_ext["ped"],
+                verbose=True,
+                n=nsamples_block,
+                map_size=nsnps,
+                start_from_id=start_sample,
+            )
             # Id map file
-            generate_random_file(filename=ifname,
-                                 file_type='.ids',
-                                 verbose=True,
-                                 n=nsamples_block,
-                                 first_sample_id=start_sample)
+            generate_random_file(
+                filename=ifname,
+                file_type=".ids",
+                verbose=True,
+                n=nsamples_block,
+                first_sample_id=start_sample,
+            )
             start_sample += nsamples_block
             remaining_samples -= nsamples_block
 
@@ -150,38 +171,43 @@ def execute_experiment_two_files(result: dict,
                         id_map[sample] = individual
             t_tmp = time.time()
             snpdb.import_samples(
-                sample_reader=exps[experiment_id]['readers']['ped'](pfname),
-                map_name=experiment_id + '_' + nsnps_id + '_' + nsamples_id,
+                sample_reader=exps[experiment_id]["readers"]["ped"](pfname),
+                map_name=experiment_id + "_" + nsnps_id + "_" + nsamples_id,
                 id_map=id_map,
-                report=False)
+                report=False,
+            )
             t_tmp = time.time() - t_tmp
             t_sample += t_tmp
         # Validating Statistics
         snpdb._db.command("validate", snpdb._config["SAMPLES_COLL"], full=True)
-        snpdb._db.command("validate",
-                          snpdb._config["SNPBLOCKS_COLL"],
-                          full=True)
-        snpdb._db.command("validate",
-                          snpdb._config["INDIVIDUALS_COLL"],
-                          full=True)
+        snpdb._db.command("validate", snpdb._config["SNPBLOCKS_COLL"], full=True)
+        snpdb._db.command("validate", snpdb._config["INDIVIDUALS_COLL"], full=True)
         # sample_size = _SAMPLES + _SNPBLOCKS + _INDS
-        sample_size = snpdb._db.command(
-            "collstats",
-            snpdb._config["SAMPLES_COLL"])['storageSize'] + snpdb._db.command(
-                "collstats", snpdb._config["SNPBLOCKS_COLL"]
-            )['storageSize'] + snpdb._db.command(
-                "collstats", snpdb._config["INDIVIDUALS_COLL"])['storageSize']
-        print("Imported samples file\tTime: " + str(round(t_sample, 3)) +
-              "s\tSize:" + str(round(sample_size / 1024**2, 2)) + "MB")
+        sample_size = (
+            snpdb._db.command("collstats", snpdb._config["SAMPLES_COLL"])["storageSize"]
+            + snpdb._db.command("collstats", snpdb._config["SNPBLOCKS_COLL"])[
+                "storageSize"
+            ]
+            + snpdb._db.command("collstats", snpdb._config["INDIVIDUALS_COLL"])[
+                "storageSize"
+            ]
+        )
+        print(
+            "Imported samples file\tTime: "
+            + str(round(t_sample, 3))
+            + "s\tSize:"
+            + str(round(sample_size / 1024 ** 2, 2))
+            + "MB"
+        )
 
         # Appending generated file sizes
-        result['fsize'].append(
-            float(os.stat(mfname).st_size) +
-            float(os.stat(pfname).st_size) * n_blocks)
+        result["fsize"].append(
+            float(os.stat(mfname).st_size) + float(os.stat(pfname).st_size) * n_blocks
+        )
         # Appending stored document sizes from MongoDB
-        result['dbsize'].append(map_size + sample_size)
+        result["dbsize"].append(map_size + sample_size)
         # Appending insertion times
-        result['time'].append(t_map + t_sample)
+        result["time"].append(t_map + t_sample)
 
         # Executing additional steps
         print("Executing additional steps...")
@@ -191,61 +217,66 @@ def execute_experiment_two_files(result: dict,
         t_tmp = time.time()
         summary = snpdb.summarize(ind)
         t_tmp = time.time() - t_tmp
-        result['summarize'].append({
-            'individual': ind,
-            'summary': summary,
-            'time': t_tmp
-        })
+        result["summarize"].append(
+            {"individual": ind, "summary": summary, "time": t_tmp}
+        )
 
         # TODO: 2.3 Exportação de sumarização para formatos originais
 
         # 2.4 Busca de indivíduos, dada uma lista de SNPs
         snp = np.random.choice(snpdb.find_snp())
-        result['individuals_of_snps'].append({})
-        result['individuals_of_snps'][-1]
+        result["individuals_of_snps"].append({})
+        result["individuals_of_snps"][-1]
         t_tmp = time.time()
         try:
-            inds = snpdb.find_individuals_of_snps(id=snp['i'], )
-            result['individuals_of_snps'][-1]['snp'] = snp
-            result['individuals_of_snps'][-1]['individuals'] = inds
+            inds = snpdb.find_individuals_of_snps(
+                id=snp["i"],
+            )
+            result["individuals_of_snps"][-1]["snp"] = snp
+            result["individuals_of_snps"][-1]["individuals"] = inds
         except Exception as e:
             print("Warning: couldn't retrieve individuals from database", e)
         t_tmp = time.time() - t_tmp
-        result['individuals_of_snps'][-1]['time'] = t_tmp
+        result["individuals_of_snps"][-1]["time"] = t_tmp
 
         # TODO: 2.5 Exportação de indivíduos para formatos originais
 
         # 2.6 Remoção de todos os dados de um indivíduo
         ind = np.random.choice(snpdb.find_individuals())
         t_tmp = time.time()
-        delete_results = snpdb.delete_individuals(id=ind['_id'])
+        delete_results = snpdb.delete_individuals(id=ind["_id"])
         t_tmp = time.time() - t_tmp
-        result['delete_individual'].append({
-            'individual':
-            ind,
-            'deleted_count': [i.deleted_count for i in delete_results],
-            'time':
-            t_tmp
-        })
+        result["delete_individual"].append(
+            {
+                "individual": ind,
+                "deleted_count": [i.deleted_count for i in delete_results],
+                "time": t_tmp,
+            }
+        )
 
         # Writing partial results to file
-        with open(results_fname, 'w') as f:
-            json.dump(results,
-                      f,
-                      ensure_ascii=True,
-                      check_circular=True,
-                      allow_nan=True,
-                      indent=1,
-                      sort_keys=True)
+        with open(results_fname, "w") as f:
+            json.dump(
+                results,
+                f,
+                ensure_ascii=True,
+                check_circular=True,
+                allow_nan=True,
+                indent=1,
+                sort_keys=True,
+            )
 
 
-def execute_experiment_one_file(result: dict,
-                                experiment_id: str,
-                                compression_method: str,
-                                nsnps: int,
-                                nsamples: int,
-                                N: int = 1) -> None:
-    """Executes experiment for file types with one file
+def execute_experiment_one_file(
+    result: dict,
+    experiment_id: str,
+    compression_method: str,
+    nsnps: int,
+    nsamples: int,
+    N: int = 1,
+) -> None:
+    """Execute experiment for file types with one file.
+
     Warning: this function uses variables defined outside its scope
 
     Args:
@@ -254,23 +285,31 @@ def execute_experiment_one_file(result: dict,
     """
     nsnps_id = nsnps_ids[nsnps]
     nsamples_id = nsamples_ids[nsamples]
-    print("Starting Experiment " + experiment_id + " (" + nsnps_id +
-          " SNPs, " + nsamples_id + " individuals) with N = " + str(N) +
-          "; Compression method: " + compression_method)
+    print(
+        "Starting Experiment "
+        + experiment_id
+        + " ("
+        + nsnps_id
+        + " SNPs, "
+        + nsamples_id
+        + " individuals) with N = "
+        + str(N)
+        + "; Compression method: "
+        + compression_method
+    )
 
     # get filenames
-    f_ext: dict = exps[experiment_id]['file_extensions']
-    fname = data_dir + 'out_' + nsnps_id + '_' + nsamples_id + f_ext['ext']
-    ifname = str(data_dir + 'out_' + nsnps_id + '_' + nsamples_id +
-                 f_ext['ids'])
+    f_ext: dict = exps[experiment_id]["file_extensions"]
+    fname = data_dir + "out_" + nsnps_id + "_" + nsamples_id + f_ext["ext"]
+    ifname = str(data_dir + "out_" + nsnps_id + "_" + nsamples_id + f_ext["ids"])
 
     # Setting up result dictionary
-    result['fsize'] = []  # file size
-    result['dbsize'] = []  # doc size in db
-    result['time'] = []  # insertion time
-    result['summarize'] = []  # summarization example and time
-    result['individuals_of_snps'] = []
-    result['delete_individual'] = []
+    result["fsize"] = []  # file size
+    result["dbsize"] = []  # doc size in db
+    result["time"] = []  # insertion time
+    result["summarize"] = []  # summarization example and time
+    result["individuals_of_snps"] = []
+    result["delete_individual"] = []
 
     # * Performing experiment N times and storing results
     for i in range(N):
@@ -295,18 +334,22 @@ def execute_experiment_one_file(result: dict,
             print("Block: " + str(i))
             nsamples_block = int(np.minimum(remaining_samples, 10000.0))
             # Map/Samples file
-            generate_random_file(filename=fname,
-                                 file_type=f_ext['ext'],
-                                 verbose=True,
-                                 n=nsamples_block,
-                                 map_size=nsnps,
-                                 start_samples_from_id=start_sample)
+            generate_random_file(
+                filename=fname,
+                file_type=f_ext["ext"],
+                verbose=True,
+                n=nsamples_block,
+                map_size=nsnps,
+                start_samples_from_id=start_sample,
+            )
             # Id map file
-            generate_random_file(filename=ifname,
-                                 file_type='.ids',
-                                 verbose=True,
-                                 n=nsamples_block,
-                                 first_sample_id=start_sample)
+            generate_random_file(
+                filename=ifname,
+                file_type=".ids",
+                verbose=True,
+                n=nsamples_block,
+                first_sample_id=start_sample,
+            )
             start_sample += nsamples_block
             remaining_samples -= nsamples_block
             # * Inserting input files into db
@@ -316,33 +359,37 @@ def execute_experiment_one_file(result: dict,
                 # Importing map file
                 t_tmp = time.time()
                 snpdb.import_map(
-                    map_reader=exps[experiment_id]['readers']['map'](fname),
-                    map_name=experiment_id + '_' + nsnps_id + '_' +
-                    nsamples_id,
+                    map_reader=exps[experiment_id]["readers"]["map"](fname),
+                    map_name=experiment_id + "_" + nsnps_id + "_" + nsamples_id,
                     force_create_new=True,
                     force_use_existing=False,
-                    report=False)
+                    report=False,
+                )
                 t_tmp = time.time() - t_tmp
                 t_map += t_tmp
                 # Validating statistics
-                snpdb._db.command("validate",
-                                  snpdb._config["MAPS_COLL"],
-                                  full=True)
-                snpdb._db.command("validate",
-                                  snpdb._config["MAPSNPS_COLL"],
-                                  full=True)
-                snpdb._db.command("validate",
-                                  snpdb._config["SNPS_COLL"],
-                                  full=True)
+                snpdb._db.command("validate", snpdb._config["MAPS_COLL"], full=True)
+                snpdb._db.command("validate", snpdb._config["MAPSNPS_COLL"], full=True)
+                snpdb._db.command("validate", snpdb._config["SNPS_COLL"], full=True)
                 # map_size = _MAPS + _MAPSNPS + _SNPS
-                map_size = snpdb._db.command(
-                    "collstats", snpdb._config["MAPS_COLL"]
-                )['storageSize'] + snpdb._db.command(
-                    "collstats", snpdb._config["MAPSNPS_COLL"]
-                )['storageSize'] + snpdb._db.command(
-                    "collstats", snpdb._config["SNPS_COLL"])['storageSize']
-                print("Imported map file\tTime: " + str(round(t_map, 3)) +
-                      "s\tSize:" + str(round(map_size / 1024**2, 2)) + "MB")
+                map_size = (
+                    snpdb._db.command("collstats", snpdb._config["MAPS_COLL"])[
+                        "storageSize"
+                    ]
+                    + snpdb._db.command("collstats", snpdb._config["MAPSNPS_COLL"])[
+                        "storageSize"
+                    ]
+                    + snpdb._db.command("collstats", snpdb._config["SNPS_COLL"])[
+                        "storageSize"
+                    ]
+                )
+                print(
+                    "Imported map file\tTime: "
+                    + str(round(t_map, 3))
+                    + "s\tSize:"
+                    + str(round(map_size / 1024 ** 2, 2))
+                    + "MB"
+                )
             # Importing sample file
             id_map: dict = {}
             # Linking samples to individuals in the database
@@ -353,36 +400,41 @@ def execute_experiment_one_file(result: dict,
                         id_map[sample] = individual
             t_tmp = time.time()
             snpdb.import_samples(
-                sample_reader=exps[experiment_id]['readers']['ped'](fname),
-                map_name=experiment_id + '_' + nsnps_id + '_' + nsamples_id,
+                sample_reader=exps[experiment_id]["readers"]["ped"](fname),
+                map_name=experiment_id + "_" + nsnps_id + "_" + nsamples_id,
                 id_map=id_map,
-                report=False)
+                report=False,
+            )
             t_tmp = time.time() - t_tmp
             t_sample += t_tmp
         # Validating Statistics
         snpdb._db.command("validate", snpdb._config["SAMPLES_COLL"], full=True)
-        snpdb._db.command("validate",
-                          snpdb._config["SNPBLOCKS_COLL"],
-                          full=True)
-        snpdb._db.command("validate",
-                          snpdb._config["INDIVIDUALS_COLL"],
-                          full=True)
+        snpdb._db.command("validate", snpdb._config["SNPBLOCKS_COLL"], full=True)
+        snpdb._db.command("validate", snpdb._config["INDIVIDUALS_COLL"], full=True)
         # sample_size = _SAMPLES + _SNPBLOCKS + _INDS
-        sample_size = snpdb._db.command(
-            "collstats",
-            snpdb._config["SAMPLES_COLL"])['storageSize'] + snpdb._db.command(
-                "collstats", snpdb._config["SNPBLOCKS_COLL"]
-            )['storageSize'] + snpdb._db.command(
-                "collstats", snpdb._config["INDIVIDUALS_COLL"])['storageSize']
-        print("Imported samples file\tTime: " + str(round(t_sample, 3)) +
-              "s\tSize:" + str(round(sample_size / 1024**2, 2)) + "MB")
+        sample_size = (
+            snpdb._db.command("collstats", snpdb._config["SAMPLES_COLL"])["storageSize"]
+            + snpdb._db.command("collstats", snpdb._config["SNPBLOCKS_COLL"])[
+                "storageSize"
+            ]
+            + snpdb._db.command("collstats", snpdb._config["INDIVIDUALS_COLL"])[
+                "storageSize"
+            ]
+        )
+        print(
+            "Imported samples file\tTime: "
+            + str(round(t_sample, 3))
+            + "s\tSize:"
+            + str(round(sample_size / 1024 ** 2, 2))
+            + "MB"
+        )
 
         # Appending generated file sizes
-        result['fsize'].append(float(os.stat(fname).st_size) * n_blocks)
+        result["fsize"].append(float(os.stat(fname).st_size) * n_blocks)
         # Appending stored document sizes from MongoDB
-        result['dbsize'].append(map_size + sample_size)
+        result["dbsize"].append(map_size + sample_size)
         # Appending insertion times
-        result['time'].append(t_map + t_sample)
+        result["time"].append(t_map + t_sample)
 
         # Executing additional steps
         print("Executing additional steps...")
@@ -392,77 +444,91 @@ def execute_experiment_one_file(result: dict,
         t_tmp = time.time()
         summary = snpdb.summarize(ind)
         t_tmp = time.time() - t_tmp
-        result['summarize'].append({
-            'individual': ind,
-            'summary': summary,
-            'time': t_tmp
-        })
+        result["summarize"].append(
+            {"individual": ind, "summary": summary, "time": t_tmp}
+        )
 
         # TODO: 2.3 Exportação de sumarização para formatos originais
 
         # 2.4 Busca de indivíduos, dada uma lista de SNPs
         snp = np.random.choice(snpdb.find_snp())
         t_tmp = time.time()
-        inds = snpdb.find_individuals_of_snps(id=snp['i'])
+        inds = snpdb.find_individuals_of_snps(id=snp["i"])
         t_tmp = time.time() - t_tmp
-        result['individuals_of_snps'].append({
-            'snp': snp,
-            'individuals': inds,
-            'time': t_tmp
-        })
+        result["individuals_of_snps"].append(
+            {"snp": snp, "individuals": inds, "time": t_tmp}
+        )
 
         # TODO: 2.5 Exportação de indivíduos para formatos originais
 
         # 2.6 Remoção de todos os dados de um indivíduo
         ind = np.random.choice(snpdb.find_individuals())
         t_tmp = time.time()
-        delete_results = snpdb.delete_individuals(id=ind['_id'])
+        delete_results = snpdb.delete_individuals(id=ind["_id"])
         t_tmp = time.time() - t_tmp
-        result['delete_individual'].append({
-            'individual':
-            ind,
-            'deleted_count': [i.deleted_count for i in delete_results],
-            'time':
-            t_tmp
-        })
+        result["delete_individual"].append(
+            {
+                "individual": ind,
+                "deleted_count": [i.deleted_count for i in delete_results],
+                "time": t_tmp,
+            }
+        )
 
         # Writing partial results to file
-        with open(results_fname, 'w') as f:
-            json.dump(results,
-                      f,
-                      ensure_ascii=True,
-                      check_circular=True,
-                      allow_nan=True,
-                      indent=1,
-                      sort_keys=True)
+        with open(results_fname, "w") as f:
+            json.dump(
+                results,
+                f,
+                ensure_ascii=True,
+                check_circular=True,
+                allow_nan=True,
+                indent=1,
+                sort_keys=True,
+            )
 
 
-def execute_experiment_bin_file(result: dict,
-                                compression_method: str,
-                                file_type: str,
-                                N: int = 1) -> None:
-    """Executes experiment for file types inserted in binary mode
+def execute_experiment_bin_file(
+    result: dict, compression_method: str, file_type: str, N: int = 1
+) -> None:
+    """Execute experiment for file types inserted in binary mode.
+
     Warning: this function uses variables defined outside its scope
 
     Args:
         result (dict): Dictionary for experiment. Values will be assigned
                        to this dictionary "by reference".
     """
-    print("Starting Experiment " + experiment_id + " with N = " + str(N) +
-          "; Compression method: " + compression_method)
+    print(
+        "Starting Experiment "
+        + experiment_id
+        + " with N = "
+        + str(N)
+        + "; Compression method: "
+        + compression_method
+    )
 
     # get filenames
-    f_ext: dict = exps[experiment_id]['file_extensions']
-    fname: str = ''
-    if file_type == 'FastQ':
-        fname = fastq_dir_1 + 'SH.71992.AP.01.1.fastq'
-    elif file_type == 'Media':
-        fname = data_dir + 'out' + f_ext['ext']
+    fname: str = ""
+    img_fnames: list = []
+    wav_fnames: list = []
+    wav_arr_fnames: list = []
+    if file_type == "FastQ":
+        fname = fastq_dir_1 + "SH.71992.AP.01.1.fastq"
+    elif file_type == "Media":
+        img_fnames = sorted([phenotype_dir_1 + i for i in os.listdir(phenotype_dir_1)])
+        wav_fnames = sorted([phenotype_dir_2 + i for i in os.listdir(phenotype_dir_2)])
+        wav_arr_fnames = sorted(
+            [phenotype_dir_3 + i for i in os.listdir(phenotype_dir_3)]
+        )
 
     # Setting up result dictionary
-    result['fsize'] = []  # file size
-    result['dbsize'] = []  # doc size in db
-    result['time'] = []  # insertion time
+    result["fsize"] = []  # file size
+    result["dbsize"] = []  # doc size in db
+    result["time"] = []  # insertion time
+
+    fsize: float = 0.0
+    t: float = 0.0
+    t_tmp: float = 0.0
 
     # * Performing experiment N times and storing results
     for i in range(N):
@@ -470,77 +536,133 @@ def execute_experiment_bin_file(result: dict,
         print("Resetting database...")
         reset_db(compression_method=compression_method)
         print("Database reset operation successful.")
-        if file_type == 'FastQ':
-            print(fname + "\tSize: " +
-                  str(round(os.stat(fname).st_size / (1024**2), 2)) + "MB")
+        if file_type == "FastQ":
+            print(
+                fname
+                + "\tSize: "
+                + str(round(os.stat(fname).st_size / (1024 ** 2), 2))
+                + "MB"
+            )
             # * Inserting input files into db
             print("Inserting input files into database...")
             # Importing map file
             # Importing sequencing file
             with open(fname, "rb") as fqf:
-                t = time.time()
+                t_tmp = time.time()
                 snpdb.insert_file(file=fqf, individual_id=0)
-                t = time.time() - t
+                t_tmp = time.time() - t_tmp
             # Validating Statistics
             snpdb._db.command("validate", "fs.chunks", full=True)
             snpdb._db.command("validate", "fs.files", full=True)
-            file_size = snpdb._db.command("collstats",
-                                          "fs.chunks")["storageSize"]
+            file_size = snpdb._db.command("collstats", "fs.chunks")["storageSize"]
             # file_size = snpdb._db["fs.files"].find_one()["length"]
-            print("Imported sequencing file\tTime: " + str(round(t, 3)) +
-                  "s\tSize:" + str(round(file_size / 1024**2, 2)) + "MB")
-        elif file_type == 'Media':
-            im_res = (800, 600)  # Image resolution
-            print("Generating input file...")
-            # * Generating input file
-            t = time.time()
-            im_arr = np.random.rand(im_res[0], im_res[1], 3) * 255
-            im_out = Image.fromarray(im_arr.astype('uint8')).convert('RGB')
-            im_out.save(fname)
-            t = time.time() - t
-            print("Generated media file\tTime: " + str(round(t, 3)) +
-                  "s\tSize: " +
-                  str(round(os.stat(fname).st_size / (1024**2), 2)) + "MB")
+            print(
+                "Imported sequencing file\tTime: "
+                + str(round(t_tmp, 3))
+                + "s\tSize:"
+                + str(round(file_size / 1024 ** 2, 2))
+                + "MB"
+            )
+            # Appending generated file sizes
+            result["fsize"].append(float(os.stat(fname).st_size))
+            # Appending stored document sizes from MongoDB
+            result["dbsize"].append(file_size)
+            # Appending insertion times
+            result["time"].append(t_tmp)
+        elif file_type == "Media":
+            result["times_img"] = []
+            result["times_wav"] = []
+            result["times_wav_arr"] = []
             # * Inserting input files into db
-            # Importing media file
-            with open(fname, "rb") as imf:
-                t = time.time()
-                snpdb.insert_file(file=imf, individual_id=0)
-                t = time.time() - t
-            # Validating Statistics
+            for fname in img_fnames:
+                # Importing media file
+                with open(fname, "rb") as imf:
+                    t_tmp = time.time()
+                    snpdb.insert_file(file=imf, individual_id=0)
+                    t_tmp = time.time() - t_tmp
+                    result["times_img"].append(t_tmp)
+                    t += t_tmp
+                # Appending generated file sizes
+                fsize += float(os.stat(fname).st_size)
             snpdb._db.command("validate", "fs.chunks", full=True)
             snpdb._db.command("validate", "fs.files", full=True)
-            file_size = snpdb._db.command("collstats",
-                                          "fs.chunks")["storageSize"]
-            # file_size = snpdb._db["fs.files"].find_one()["length"]
-            print("Imported media file\tTime: " + str(round(t, 3)) +
-                  "s\tSize:" + str(round(file_size / 1024**2, 2)) + "MB")
-
-        # Appending generated file sizes
-        result['fsize'].append(float(os.stat(fname).st_size))
-        # Appending stored document sizes from MongoDB
-        result['dbsize'].append(file_size)
-        # Appending insertion times
-        result['time'].append(t)
+            file_size = snpdb._db.command("collstats", "fs.chunks")["storageSize"]
+            result["fsize_img"] = fsize
+            result["dbsize_img"] = file_size
+            result["time_img"] = t_tmp
+            for fname in wav_fnames:
+                # Importing media file
+                with open(fname, "rb") as imf:
+                    t_tmp = time.time()
+                    snpdb.insert_file(file=imf, individual_id=0)
+                    t_tmp = time.time() - t_tmp
+                    result["times_wav"].append(t_tmp)
+                    t += t_tmp
+                # Appending generated file sizes
+                fsize += float(os.stat(fname).st_size)
+            snpdb._db.command("validate", "fs.chunks", full=True)
+            snpdb._db.command("validate", "fs.files", full=True)
+            file_size = snpdb._db.command("collstats", "fs.chunks")["storageSize"]
+            result["fsize_wav"] = fsize - result["fsize_img"]
+            result["dbsize_wav"] = file_size - result["dbsize_img"]
+            result["time_wav"] = t_tmp - result["time_img"]
+            for fname in wav_arr_fnames:
+                # Importing media file
+                with open(fname, "rb") as imf:
+                    t_tmp = time.time()
+                    snpdb.insert_file(file=imf, individual_id=0)
+                    t_tmp = time.time() - t_tmp
+                    result["times_wav_arr"].append(t_tmp)
+                    t += t_tmp
+                # Appending generated file sizes
+                fsize += float(os.stat(fname).st_size)
+            snpdb._db.command("validate", "fs.chunks", full=True)
+            snpdb._db.command("validate", "fs.files", full=True)
+            file_size = snpdb._db.command("collstats", "fs.chunks")["storageSize"]
+            result["fsize_wav_arr"] = fsize - result["fsize_img"] - result["fsize_wav"]
+            result["dbsize_wav_arr"] = (
+                file_size - result["dbsize_img"] - result["dbsize_wav"]
+            )
+            result["time_wav_arr"] = t_tmp - result["time_img"] - result["time_wav"]
+        snpdb._db.command("validate", "fs.chunks", full=True)
+        snpdb._db.command("validate", "fs.files", full=True)
+        file_size = snpdb._db.command("collstats", "fs.chunks")["storageSize"]
+        result["fsize"].append(fsize)
+        result["dbsize"].append(file_size)
+        result["time"].append(t_tmp)
+        print(
+            "Imported media file\tTime: "
+            + str(round(t, 3))
+            + "s\tFsize:"
+            + str(round(fsize / 1024 ** 2, 2))
+            + "MB\tDBSize:"
+            + str(round(file_size / 1024 ** 2, 2))
+            + "MB"
+        )
 
         # Writing partial results to file
-        with open(results_fname, 'w') as f:
-            json.dump(results,
-                      f,
-                      ensure_ascii=True,
-                      check_circular=True,
-                      allow_nan=True,
-                      indent=1,
-                      sort_keys=True)
+        with open(results_fname, "w") as f:
+            json.dump(
+                results,
+                f,
+                ensure_ascii=True,
+                check_circular=True,
+                allow_nan=True,
+                indent=1,
+                sort_keys=True,
+            )
 
 
-def execute_experiment_all(result: dict,
-                           experiment_id: str,
-                           compression_method: str,
-                           nsnps: int,
-                           nsamples: int,
-                           N: int = 1):
-    """Executes experiment for all file types
+def execute_experiment_all(
+    result: dict,
+    experiment_id: str,
+    compression_method: str,
+    nsnps: int,
+    nsamples: int,
+    N: int = 1,
+):
+    """Execute experiment for all file types.
+
     Warning: this function uses variables defined outside its scope
 
     Args:
@@ -549,41 +671,54 @@ def execute_experiment_all(result: dict,
     """
     nsnps_id = nsnps_ids[nsnps]
     nsamples_id = nsamples_ids[nsamples]
-    print("Starting Experiment " + experiment_id + " (" + nsnps_id +
-          " SNPs, " + nsamples_id + " individuals) with N = " + str(N) +
-          "; Compression method: " + compression_method)
+    print(
+        "Starting Experiment "
+        + experiment_id
+        + " ("
+        + nsnps_id
+        + " SNPs, "
+        + nsamples_id
+        + " individuals) with N = "
+        + str(N)
+        + "; Compression method: "
+        + compression_method
+    )
 
     # Filenames
-    f_ext: dict = exps[experiment_id]['file_extensions']
-    fqfname: str = fastq_dir_1 + 'SH.71992.AP.01.1.fastq'
-    imfname: str = data_dir + 'out_image.jpg'
+    f_ext: dict = exps[experiment_id]["file_extensions"]
+    fqfname: str = fastq_dir_1 + "SH.71992.AP.01.1.fastq"
+    imfname: str = data_dir + "out_image.jpg"
     im_res: tuple = (800, 600)
     mfnames: dict = {
-        k: data_dir + 'out_' + nsnps_id + '_' + nsamples_id + f_ext[k]['map']
-        for k in f_ext if k in ['0125', 'PLINK']
+        k: data_dir + "out_" + nsnps_id + "_" + nsamples_id + f_ext[k]["map"]
+        for k in f_ext
+        if k in ["0125", "PLINK"]
     }
     pfnames: dict = {
-        k: data_dir + 'out_' + nsnps_id + '_' + nsamples_id + f_ext[k]['ped']
-        for k in f_ext if k in ['0125', 'PLINK']
+        k: data_dir + "out_" + nsnps_id + "_" + nsamples_id + f_ext[k]["ped"]
+        for k in f_ext
+        if k in ["0125", "PLINK"]
     }
     fnames: dict = {
-        k: data_dir + 'out_' + nsnps_id + '_' + nsamples_id + f_ext[k]['ext']
-        for k in f_ext if k in ['FR', 'VCF']
+        k: data_dir + "out_" + nsnps_id + "_" + nsamples_id + f_ext[k]["ext"]
+        for k in f_ext
+        if k in ["FR", "VCF"]
     }
     ifnames: dict = {
-        k: data_dir + 'out_' + nsnps_id + '_' + nsamples_id + f_ext[k]['ids']
-        for k in f_ext if k not in ['FastQ', 'Media']
+        k: data_dir + "out_" + nsnps_id + "_" + nsamples_id + f_ext[k]["ids"]
+        for k in f_ext
+        if k not in ["FastQ", "Media"]
     }
 
     # Setting up result dictionary
-    result['fsize'] = []  # file size
-    result['dbsize'] = []  # doc size in db
-    result['time'] = []  # insertion time
-    result['summarize'] = []  # summarization example and time
-    result['individuals_of_snps'] = []
-    result['delete_individual'] = []
-    result['export'] = []
-    result['export_bin'] = []
+    result["fsize"] = []  # file size
+    result["dbsize"] = []  # doc size in db
+    result["time"] = []  # insertion time
+    result["summarize"] = []  # summarization example and time
+    result["individuals_of_snps"] = []
+    result["delete_individual"] = []
+    result["export"] = []
+    result["export_bin"] = []
 
     # * Performing experiment N times and storing results
     for i in range(N):
@@ -608,23 +743,21 @@ def execute_experiment_all(result: dict,
         imported_map = {k: False for k in fnames}  # for single-file formats
         # Map files
         for k in mfnames:
-            generate_random_file(filename=mfnames[k],
-                                 file_type=f_ext[k]['map'],
-                                 verbose=True,
-                                 n=nsnps)
+            generate_random_file(
+                filename=mfnames[k], file_type=f_ext[k]["map"], verbose=True, n=nsnps
+            )
             #  start_from_id=start_map)
         # Importing map files
         for k in mfnames:
             print("Importing double-file format maps:", k)
             t_tmp = time.time()
             snpdb.import_map(
-                map_reader=exps[experiment_id]['readers'][k]['map'](
-                    mfnames[k]),
-                map_name=experiment_id + '_' + nsnps_id + '_' + nsamples_id +
-                '_' + k,
+                map_reader=exps[experiment_id]["readers"][k]["map"](mfnames[k]),
+                map_name=experiment_id + "_" + nsnps_id + "_" + nsamples_id + "_" + k,
                 force_create_new=True,
                 force_use_existing=False,
-                report=False)
+                report=False,
+            )
             t_tmp = time.time() - t_tmp
             t_map += t_tmp
         for i in range(n_blocks):
@@ -633,48 +766,61 @@ def execute_experiment_all(result: dict,
             # Generating single-file format files
             for k in fnames:
                 # Map/Samples file
-                generate_random_file(filename=fnames[k],
-                                     file_type=f_ext[k]['ext'],
-                                     verbose=True,
-                                     n=nsamples_block,
-                                     map_size=nsnps,
-                                     start_samples_from_id=start_sample)
+                generate_random_file(
+                    filename=fnames[k],
+                    file_type=f_ext[k]["ext"],
+                    verbose=True,
+                    n=nsamples_block,
+                    map_size=nsnps,
+                    start_samples_from_id=start_sample,
+                )
                 # Id map file
-                generate_random_file(filename=ifnames[k],
-                                     file_type='.ids',
-                                     verbose=True,
-                                     n=nsamples_block,
-                                     first_sample_id=start_sample)
+                generate_random_file(
+                    filename=ifnames[k],
+                    file_type=".ids",
+                    verbose=True,
+                    n=nsamples_block,
+                    first_sample_id=start_sample,
+                )
                 # Import double-file map if not imported
                 if not imported_map[k]:
                     imported_map[k] = True
                     print("Importing single-file format maps:", k)
                     t_tmp = time.time()
                     snpdb.import_map(
-                        map_reader=exps[experiment_id]['readers'][k]['map'](
-                            fnames[k]),
-                        map_name=experiment_id + '_' + nsnps_id + '_' +
-                        nsamples_id + '_' + k,
+                        map_reader=exps[experiment_id]["readers"][k]["map"](fnames[k]),
+                        map_name=experiment_id
+                        + "_"
+                        + nsnps_id
+                        + "_"
+                        + nsamples_id
+                        + "_"
+                        + k,
                         force_create_new=True,
                         force_use_existing=False,
-                        report=False)
+                        report=False,
+                    )
                     t_tmp = time.time() - t_tmp
                     t_map += t_tmp
             # Generating double-file format sample files
             for k in pfnames:
                 # Samples file
-                generate_random_file(filename=pfnames[k],
-                                     file_type=f_ext[k]['ped'],
-                                     verbose=True,
-                                     n=nsamples_block,
-                                     map_size=nsnps,
-                                     start_from_id=start_sample)
+                generate_random_file(
+                    filename=pfnames[k],
+                    file_type=f_ext[k]["ped"],
+                    verbose=True,
+                    n=nsamples_block,
+                    map_size=nsnps,
+                    start_from_id=start_sample,
+                )
                 # Id map file
-                generate_random_file(filename=ifnames[k],
-                                     file_type='.ids',
-                                     verbose=True,
-                                     n=nsamples_block,
-                                     first_sample_id=start_sample)
+                generate_random_file(
+                    filename=ifnames[k],
+                    file_type=".ids",
+                    verbose=True,
+                    n=nsamples_block,
+                    first_sample_id=start_sample,
+                )
             start_sample += nsamples_block
             remaining_samples -= nsamples_block
 
@@ -691,12 +837,17 @@ def execute_experiment_all(result: dict,
                             id_map[sample] = individual
                 t_tmp = time.time()
                 snpdb.import_samples(
-                    sample_reader=exps[experiment_id]['readers'][k]['ped'](
-                        pfnames[k]),
-                    map_name=experiment_id + '_' + nsnps_id + '_' +
-                    nsamples_id + '_' + k,
+                    sample_reader=exps[experiment_id]["readers"][k]["ped"](pfnames[k]),
+                    map_name=experiment_id
+                    + "_"
+                    + nsnps_id
+                    + "_"
+                    + nsamples_id
+                    + "_"
+                    + k,
                     id_map=id_map,
-                    report=False)
+                    report=False,
+                )
                 t_tmp = time.time() - t_tmp
                 t_sample += t_tmp
             for k in fnames:
@@ -710,12 +861,17 @@ def execute_experiment_all(result: dict,
                             id_map[sample] = individual
                 t_tmp = time.time()
                 snpdb.import_samples(
-                    sample_reader=exps[experiment_id]['readers'][k]['ped'](
-                        fnames[k]),
-                    map_name=experiment_id + '_' + nsnps_id + '_' +
-                    nsamples_id + '_' + k,
+                    sample_reader=exps[experiment_id]["readers"][k]["ped"](fnames[k]),
+                    map_name=experiment_id
+                    + "_"
+                    + nsnps_id
+                    + "_"
+                    + nsamples_id
+                    + "_"
+                    + k,
                     id_map=id_map,
-                    report=False)
+                    report=False,
+                )
                 t_tmp = time.time() - t_tmp
                 t_sample += t_tmp
         # Generating and Importing FastQ and Media files
@@ -727,7 +883,7 @@ def execute_experiment_all(result: dict,
             t_bin += t_tmp
         print("Generating and inserting media file into database...")
         im_arr = np.random.rand(im_res[0], im_res[1], 3) * 255
-        im_out = Image.fromarray(im_arr.astype('uint8')).convert('RGB')
+        im_out = Image.fromarray(im_arr.astype("uint8")).convert("RGB")
         im_out.save(imfname)
         with open(imfname, "rb") as imf:
             t_tmp = time.time()
@@ -741,28 +897,28 @@ def execute_experiment_all(result: dict,
         snpdb._db.command("validate", snpdb._config["MAPSNPS_COLL"], full=True)
         snpdb._db.command("validate", snpdb._config["SNPS_COLL"], full=True)
         snpdb._db.command("validate", snpdb._config["SAMPLES_COLL"], full=True)
-        snpdb._db.command("validate",
-                          snpdb._config["SNPBLOCKS_COLL"],
-                          full=True)
-        snpdb._db.command("validate",
-                          snpdb._config["INDIVIDUALS_COLL"],
-                          full=True)
+        snpdb._db.command("validate", snpdb._config["SNPBLOCKS_COLL"], full=True)
+        snpdb._db.command("validate", snpdb._config["INDIVIDUALS_COLL"], full=True)
         snpdb._db.command("validate", "fs.chunks", full=True)
         snpdb._db.command("validate", "fs.files", full=True)
 
         # Getting dbsizes
-        map_size = snpdb._db.command(
-            "collstats",
-            snpdb._config["MAPS_COLL"])['storageSize'] + snpdb._db.command(
-                "collstats", snpdb.
-                _config["MAPSNPS_COLL"])['storageSize'] + snpdb._db.command(
-                    "collstats", snpdb._config["SNPS_COLL"])['storageSize']
-        sample_size = snpdb._db.command(
-            "collstats",
-            snpdb._config["SAMPLES_COLL"])['storageSize'] + snpdb._db.command(
-                "collstats", snpdb._config["SNPBLOCKS_COLL"]
-            )['storageSize'] + snpdb._db.command(
-                "collstats", snpdb._config["INDIVIDUALS_COLL"])['storageSize']
+        map_size = (
+            snpdb._db.command("collstats", snpdb._config["MAPS_COLL"])["storageSize"]
+            + snpdb._db.command("collstats", snpdb._config["MAPSNPS_COLL"])[
+                "storageSize"
+            ]
+            + snpdb._db.command("collstats", snpdb._config["SNPS_COLL"])["storageSize"]
+        )
+        sample_size = (
+            snpdb._db.command("collstats", snpdb._config["SAMPLES_COLL"])["storageSize"]
+            + snpdb._db.command("collstats", snpdb._config["SNPBLOCKS_COLL"])[
+                "storageSize"
+            ]
+            + snpdb._db.command("collstats", snpdb._config["INDIVIDUALS_COLL"])[
+                "storageSize"
+            ]
+        )
         bin_size = snpdb._db.command("collstats", "fs.chunks")["storageSize"]
 
         # Appending generated file sizes
@@ -772,11 +928,11 @@ def execute_experiment_all(result: dict,
         fsize += sum([os.stat(fnames[k]).st_size * n_blocks for k in fnames])
         fsize += os.stat(imfname).st_size
         fsize += os.stat(fqfname).st_size
-        result['fsize'].append(fsize)
+        result["fsize"].append(fsize)
         # Appending stored document sizes from MongoDB
-        result['dbsize'].append(map_size + sample_size + bin_size)
+        result["dbsize"].append(map_size + sample_size + bin_size)
         # Appending insertion times
-        result['time'].append(t_map + t_sample + t_bin)
+        result["time"].append(t_map + t_sample + t_bin)
 
         # Executing additional steps
         print("Executing additional steps...")
@@ -786,61 +942,70 @@ def execute_experiment_all(result: dict,
         t_tmp = time.time()
         summary = snpdb.summarize(ind)
         t_tmp = time.time() - t_tmp
-        result['summarize'].append({
-            'individual': ind,
-            'summary': summary,
-            'time': t_tmp
-        })
+        result["summarize"].append(
+            {"individual": ind, "summary": summary, "time": t_tmp}
+        )
 
         # 2.3 Exportação de sumarização para formatos originais
         try:
             export: dict = {}
-            export['Z125'] = {}
-            export['PLINK'] = {}
-            ind_map = result['summarize'][-1]['individual']['samples'][-1][
-                'map']
+            export["Z125"] = {}
+            export["PLINK"] = {}
+            ind_map = result["summarize"][-1]["individual"]["samples"][-1]["map"]
             samples = [
-                sample['id']
-                for sample in result['summarize'][-1]['individual']['samples']
-                if sample['map'] == ind_map
+                sample["id"]
+                for sample in result["summarize"][-1]["individual"]["samples"]
+                if sample["map"] == ind_map
             ]
             t_tmp = time.time()
-            snpdb.export_map(ind_map, writers.Z125MapWriter,
-                             data_dir + 'ind_export.0125map')
+            snpdb.export_map(
+                ind_map, writers.Z125MapWriter, data_dir + "ind_export.0125map"
+            )
             t_tmp = time.time() - t_tmp
-            export['Z125']['map'] = t_tmp
+            export["Z125"]["map"] = t_tmp
             t_tmp = time.time()
-            snpdb.export_samples(samples, ind_map, writers.Z125SampleWriter,
-                                 data_dir + 'ind_export.0125ped')
+            snpdb.export_samples(
+                samples,
+                ind_map,
+                writers.Z125SampleWriter,
+                data_dir + "ind_export.0125ped",
+            )
             t_tmp = time.time() - t_tmp
-            export['Z125']['samples'] = t_tmp
+            export["Z125"]["samples"] = t_tmp
             t_tmp = time.time()
-            snpdb.export_map(ind_map, writers.PlinkMapWriter,
-                             data_dir + 'ind_export.plmap')
+            snpdb.export_map(
+                ind_map, writers.PlinkMapWriter, data_dir + "ind_export.plmap"
+            )
             t_tmp = time.time() - t_tmp
-            export['PLINK']['map'] = t_tmp
+            export["PLINK"]["map"] = t_tmp
             t_tmp = time.time()
-            snpdb.export_samples(samples, ind_map, writers.PlinkSampleWriter,
-                                 data_dir + 'ind_export.plped')
+            snpdb.export_samples(
+                samples,
+                ind_map,
+                writers.PlinkSampleWriter,
+                data_dir + "ind_export.plped",
+            )
             t_tmp = time.time() - t_tmp
-            export['PLINK']['samples'] = t_tmp
-            result['export'].append(export)
+            export["PLINK"]["samples"] = t_tmp
+            result["export"].append(export)
         except IndexError as e:
             print("Warning: individual has no map/samples", e)
 
         # 2.4 Busca de indivíduos, dada uma lista de SNPs
         snp = np.random.choice(snpdb.find_snp())
-        result['individuals_of_snps'].append({})
-        result['individuals_of_snps'][-1]
+        result["individuals_of_snps"].append({})
+        result["individuals_of_snps"][-1]
         t_tmp = time.time()
         try:
-            inds = snpdb.find_individuals_of_snps(id=snp['i'], )
-            result['individuals_of_snps'][-1]['snp'] = snp
-            result['individuals_of_snps'][-1]['individuals'] = inds
+            inds = snpdb.find_individuals_of_snps(
+                id=snp["i"],
+            )
+            result["individuals_of_snps"][-1]["snp"] = snp
+            result["individuals_of_snps"][-1]["individuals"] = inds
         except Exception as e:
             print("Warning: couldn't retrieve individuals from database", e)
         t_tmp = time.time() - t_tmp
-        result['individuals_of_snps'][-1]['snp'] = t_tmp
+        result["individuals_of_snps"][-1]["snp"] = t_tmp
 
         # 2.5 Exportação de dados brutos/binários
         try:
@@ -848,32 +1013,34 @@ def execute_experiment_all(result: dict,
             t_tmp = time.time()
             snpdb.get_files(db_files)
             t_tmp = time.time() - t_tmp
-            result['export_bin'].append(t_tmp)
+            result["export_bin"].append(t_tmp)
         except Exception as e:
             print(e)
 
         # 2.6 Remoção de todos os dados de um indivíduo
         ind = np.random.choice(snpdb.find_individuals())
         t_tmp = time.time()
-        delete_results = snpdb.delete_individuals(id=ind['_id'])
+        delete_results = snpdb.delete_individuals(id=ind["_id"])
         t_tmp = time.time() - t_tmp
-        result['delete_individual'].append({
-            'individual':
-            ind,
-            'deleted_count': [i.deleted_count for i in delete_results],
-            'time':
-            t_tmp
-        })
+        result["delete_individual"].append(
+            {
+                "individual": ind,
+                "deleted_count": [i.deleted_count for i in delete_results],
+                "time": t_tmp,
+            }
+        )
 
         # Writing partial results to file
-        with open(results_fname, 'w') as f:
-            json.dump(results,
-                      f,
-                      ensure_ascii=True,
-                      check_circular=True,
-                      allow_nan=True,
-                      indent=1,
-                      sort_keys=True)
+        with open(results_fname, "w") as f:
+            json.dump(
+                results,
+                f,
+                ensure_ascii=True,
+                check_circular=True,
+                allow_nan=True,
+                indent=1,
+                sort_keys=True,
+            )
 
 
 # %% [markdown]
@@ -918,33 +1085,35 @@ def execute_experiment_all(result: dict,
 # %%
 # ? Execute experiment only if not exists in results
 # ? Grouping experiments with similar formats
-experiment_ids: list = ['1.A', '1.B', '2.A', '2.C']
+experiment_ids: list = ["1.A", "1.B", "2.A", "2.C"]
 for experiment_id in experiment_ids:
-    if experiment_id.startswith('1'):
-        N = 10  # Performing experiments with N loops
+    if experiment_id.startswith("1"):
+        N = 1  # Performing experiments with N loops
     else:
         N = 1  # Only 1 loop for experiments 2.*
     # file_type = exps[experiment_id]['file_type']
     results.setdefault(experiment_id, {})
-    for compression_method in exps[experiment_id]['compression_methods']:
+    for compression_method in exps[experiment_id]["compression_methods"]:
         results[experiment_id].setdefault(compression_method, {})
-        for nsnps in exps[experiment_id]['nsnps_list']:
+        for nsnps in exps[experiment_id]["nsnps_list"]:
             nsnps_id = nsnps_ids[nsnps]
             nsnps = int(nsnps)
             results[experiment_id][compression_method].setdefault(nsnps_id, {})
-            for nsamples in exps[experiment_id]['nsamples_list']:
+            for nsamples in exps[experiment_id]["nsamples_list"]:
                 nsamples_id = nsamples_ids[nsamples]
                 nsamples = int(nsamples)
-                results[experiment_id][compression_method][
-                    nsnps_id].setdefault(nsamples_id, {})
+                results[experiment_id][compression_method][nsnps_id].setdefault(
+                    nsamples_id, {}
+                )
                 # ? Using pointers to results dictionary
                 result = results[experiment_id][compression_method][nsnps_id][
-                    nsamples_id]
+                    nsamples_id
+                ]
                 # Only execute experiment if empty
                 if len(result) == 0:
-                    execute_experiment_two_files(result, experiment_id,
-                                                 compression_method, nsnps,
-                                                 nsamples, N)
+                    execute_experiment_two_files(
+                        result, experiment_id, compression_method, nsnps, nsamples, N
+                    )
 
 # %% [markdown]
 # ## 1.C - Arquivo FR
@@ -954,33 +1123,35 @@ for experiment_id in experiment_ids:
 # %%
 # ? Execute experiment only if not exists in results
 # ? Grouping experiments with similar formats
-experiment_ids = ['1.C', '1.D', '2.B']
+experiment_ids = ["1.C", "1.D", "2.B"]
 for experiment_id in experiment_ids:
-    if experiment_id.startswith('1'):
+    if experiment_id.startswith("1"):
         N = 10  # Performing experiments with N loops
     else:
         N = 1  # Only 1 loop for experiments 2.*
     # file_type = exps[experiment_id]['file_type']
     results.setdefault(experiment_id, {})
-    for compression_method in exps[experiment_id]['compression_methods']:
+    for compression_method in exps[experiment_id]["compression_methods"]:
         results[experiment_id].setdefault(compression_method, {})
-        for nsnps in exps[experiment_id]['nsnps_list']:
+        for nsnps in exps[experiment_id]["nsnps_list"]:
             nsnps_id = nsnps_ids[nsnps]
             nsnps = int(nsnps)
             results[experiment_id][compression_method].setdefault(nsnps_id, {})
-            for nsamples in exps[experiment_id]['nsamples_list']:
+            for nsamples in exps[experiment_id]["nsamples_list"]:
                 nsamples_id = nsamples_ids[nsamples]
                 nsamples = int(nsamples)
-                results[experiment_id][compression_method][
-                    nsnps_id].setdefault(nsamples_id, {})
+                results[experiment_id][compression_method][nsnps_id].setdefault(
+                    nsamples_id, {}
+                )
                 # ? Using pointers to results dictionary
                 result = results[experiment_id][compression_method][nsnps_id][
-                    nsamples_id]
+                    nsamples_id
+                ]
                 # Only execute experiment if empty
                 if len(result) == 0:
-                    execute_experiment_one_file(result, experiment_id,
-                                                compression_method, nsnps,
-                                                nsamples, N)
+                    execute_experiment_one_file(
+                        result, experiment_id, compression_method, nsnps, nsamples, N
+                    )
 
 # %% [markdown]
 # ## 1.E - Arquivo FastQ
@@ -989,22 +1160,21 @@ for experiment_id in experiment_ids:
 # %%
 # ? Execute experiment only if not exists in results
 # ? Grouping experiments with similar formats
-experiment_ids = ['1.E', '1.F']
+experiment_ids = ["1.E", "1.F"]
 for experiment_id in experiment_ids:
-    if experiment_id.startswith('1'):
-        N = 10  # Performing experiments with N loops
+    if experiment_id.startswith("1"):
+        N = 1  # Performing experiments with N loops
     else:
         N = 1  # Only 1 loop for experiments 2.*
-    file_type = exps[experiment_id]['file_type']
+    file_type = exps[experiment_id]["file_type"]
     results.setdefault(experiment_id, {})
-    for compression_method in exps[experiment_id]['compression_methods']:
+    for compression_method in exps[experiment_id]["compression_methods"]:
         results[experiment_id].setdefault(compression_method, {})
         # ? Using pointers to results dictionary
         result = results[experiment_id][compression_method]
         # Only execute experiment if empty
         if len(result) == 0:
-            execute_experiment_bin_file(result, compression_method, file_type,
-                                        N)
+            execute_experiment_bin_file(result, compression_method, file_type, N)
 
 # %% [markdown]
 # ## 1.G - All
@@ -1013,44 +1183,48 @@ for experiment_id in experiment_ids:
 # %%
 # ? Execute experiment only if not exists in results
 # ? Grouping experiments with similar formats
-experiment_ids = ['1.G', '2.D']
+experiment_ids = ["1.G", "2.D"]
 for experiment_id in experiment_ids:
-    if experiment_id.startswith('1'):
+    if experiment_id.startswith("1"):
         N = 1  # Performing experiments with N loops
     else:
         N = 1  # Only 1 loop for experiments 2.*
     # file_type = exps[experiment_id]['file_type']
     results.setdefault(experiment_id, {})
-    for compression_method in exps[experiment_id]['compression_methods']:
+    for compression_method in exps[experiment_id]["compression_methods"]:
         results[experiment_id].setdefault(compression_method, {})
-        for nsnps in exps[experiment_id]['nsnps_list']:
+        for nsnps in exps[experiment_id]["nsnps_list"]:
             nsnps_id = nsnps_ids[nsnps]
             nsnps = int(nsnps)
             results[experiment_id][compression_method].setdefault(nsnps_id, {})
-            for nsamples in exps[experiment_id]['nsamples_list']:
+            for nsamples in exps[experiment_id]["nsamples_list"]:
                 nsamples_id = nsamples_ids[nsamples]
                 nsamples = int(nsamples)
-                results[experiment_id][compression_method][
-                    nsnps_id].setdefault(nsamples_id, {})
+                results[experiment_id][compression_method][nsnps_id].setdefault(
+                    nsamples_id, {}
+                )
                 # ? Using pointers to results dictionary
                 result = results[experiment_id][compression_method][nsnps_id][
-                    nsamples_id]
+                    nsamples_id
+                ]
                 # Only execute experiment if empty
                 if len(result) == 0:
-                    execute_experiment_all(result, experiment_id,
-                                           compression_method, nsnps, nsamples,
-                                           N)
+                    execute_experiment_all(
+                        result, experiment_id, compression_method, nsnps, nsamples, N
+                    )
 
 # %% [markdown]
 # # Saving results
 
 # %%
 # Writing results to file
-with open(results_fname, 'w') as f:
-    json.dump(results,
-              f,
-              ensure_ascii=True,
-              check_circular=True,
-              allow_nan=True,
-              indent=1,
-              sort_keys=True)
+with open(results_fname, "w") as f:
+    json.dump(
+        results,
+        f,
+        ensure_ascii=True,
+        check_circular=True,
+        allow_nan=True,
+        indent=1,
+        sort_keys=True,
+    )
