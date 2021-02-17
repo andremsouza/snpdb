@@ -196,6 +196,7 @@ for experiment_id in exps:
 # %%
 # Filtering DataFrame to only 'zlib' experiments
 df = df[df["compression_method"] == "zlib"]
+df = df[df["nsnps"] != 50000000.0]
 
 # %% [markdown]
 # #### Criando colunas concatenadas
@@ -235,7 +236,7 @@ df_melted.loc[df_melted["nsnps"] == 50000000, "nsnps"] = nsnps_ids[float(5000000
 df_melted.loc[df_melted["nsnps"] == 1000000, "nsnps"] = nsnps_ids[float(1000000)]
 df_melted.loc[df_melted["nsnps"] == 100000, "nsnps"] = nsnps_ids[float(100000)]
 df_melted = df_melted[df_melted["file_type"] != "Media"]
-sns.set(style="whitegrid", palette=sns.color_palette("muted", n_colors=6, desat=1.0))
+sns.set(style="whitegrid", palette=sns.color_palette("Blues_d", n_colors=3, desat=1.0))
 snsplot = sns.catplot(
     x="file_type",
     y="value",
@@ -277,7 +278,7 @@ df_melted["variable"] = (
 )
 df_melted["value"] /= 1024 ** 2
 df_melted = df_melted[df_melted["file_type"] != "Media"]
-sns.set(style="whitegrid", palette=sns.color_palette("muted", n_colors=6, desat=1.0))
+sns.set(style="whitegrid", palette=sns.color_palette("Blues_d", n_colors=6, desat=1.0))
 snsplot = sns.catplot(
     x="file_type",
     y="value",
@@ -331,16 +332,20 @@ df_melted = pd.melt(
     id_vars=["experiment_id", "compression_method", "file_type", "nsnps", "nsamples"],
     value_vars=["time"],
 )
-sns.set(style="whitegrid", palette=sns.color_palette("muted", n_colors=6, desat=1.0))
+df_melted.loc[df_melted["nsnps"] == 50000000, "nsnps"] = nsnps_ids[float(50000000)]
+df_melted.loc[df_melted["nsnps"] == 1000000, "nsnps"] = nsnps_ids[float(1000000)]
+df_melted.loc[df_melted["nsnps"] == 100000, "nsnps"] = nsnps_ids[float(100000)]
+sns.set(
+    style="whitegrid", palette=sns.color_palette("dark:#69d", n_colors=2, desat=1.0)
+)
 fig = plt.figure(figsize=(6.4, 6.4))
 ax = sns.lineplot(
     data=df_melted,
     x="nsamples",
     y="value",
-    hue="file_type",
-    hue_order=["0125", "PLINK", "VCF", "ALL"],
-    palette="tab10",
-    style="nsnps",
+    hue="nsnps",
+    # hue_order=["0125", "PLINK", "VCF", "ALL"],
+    style="file_type",
     ci=None,
     legend="auto",
     markers=True,
@@ -385,18 +390,19 @@ df_melted = df_melted[df_melted["nsnps"] == 100000.0]
 # df_melted['variable'] = df_melted['variable'].str.replace(
 #     '100000.0', '100k').str.replace('1000000.0', '1m')
 df_melted["value"] /= 1024 ** 2
-sns.set(style="whitegrid", palette=sns.color_palette("muted", n_colors=6, desat=1.0))
+sns.set(
+    style="whitegrid", palette=sns.color_palette("dark:#69d", n_colors=2, desat=1.0)
+)
 
 fig = plt.figure(figsize=(6.4, 6.4))
 ax = sns.lineplot(
     data=df_melted,
     x="nsamples",
     y="value",
-    hue="file_type",
-    hue_order=["0125", "PLINK", "VCF", "ALL"],
-    palette="tab10",
-    style="variable",
-    style_order=["fsize", "dbsize"],
+    hue="variable",
+    # hue_order=["0125", "PLINK", "VCF", "ALL"],
+    style="file_type",
+    # style_order=["fsize", "dbsize"],
     ci=None,
     legend="auto",
     markers=True,
@@ -441,18 +447,20 @@ df_melted = df_melted[df_melted["nsnps"] == 1000000.0]
 # df_melted['variable'] = df_melted['variable'].str.replace(
 #     '100000.0', '100k').str.replace('1000000.0', '1m')
 df_melted["value"] /= 1024 ** 2
-sns.set(style="whitegrid", palette=sns.color_palette("muted", n_colors=6, desat=1.0))
+sns.set(
+    style="whitegrid", palette=sns.color_palette("dark:#69d", n_colors=2, desat=1.0)
+)
 
 fig = plt.figure(figsize=(6.4, 6.4))
 ax = sns.lineplot(
     data=df_melted,
     x="nsamples",
     y="value",
-    hue="file_type",
-    hue_order=["0125", "PLINK", "VCF", "ALL"],
-    palette="tab10",
-    style="variable",
-    style_order=["fsize", "dbsize"],
+    hue="variable",
+    # hue_order=["0125", "PLINK", "VCF", "ALL"],
+    # palette="tab10",
+    style="file_type",
+    # style_order=["fsize", "dbsize"],
     ci=None,
     legend="auto",
     markers=True,
@@ -561,17 +569,19 @@ df_melted = pd.melt(
 )
 df_melted.loc[:, "nsnps"].replace(100000.0, "100k", inplace=True)
 df_melted.loc[:, "nsnps"].replace(1000000.0, "1m", inplace=True)
-sns.set(style="whitegrid", palette=sns.color_palette("muted", n_colors=6, desat=1.0))
+sns.set(
+    style="whitegrid", palette=sns.color_palette("dark:#69d", n_colors=2, desat=1.0)
+)
 
 fig = plt.figure(figsize=(6.4, 6.4))
 ax = sns.lineplot(
     data=df_melted,
     x="nsamples",
     y="value",
-    hue="file_type",
-    hue_order=["0125", "PLINK", "VCF", "ALL"],
-    palette="tab10",
-    style="nsnps",
+    hue="nsnps",
+    # hue_order=["0125", "PLINK", "VCF", "ALL"],
+    # palette="tab10",
+    style="file_type",
     ci=None,
     legend="auto",
     markers=True,
@@ -619,7 +629,14 @@ df_melted = pd.melt(
     value_vars=["0125", "PLINK", "FastQ"],
 )
 df_melted.loc[:, "nsamples"] = df_melted["nsamples"].astype(np.int)
-sns.set(style="whitegrid", palette=sns.color_palette("muted", n_colors=6, desat=1.0))
+sns.set(
+    style="whitegrid",
+    palette=sns.color_palette(
+        "dark:#69d",
+        n_colors=3,
+        desat=1.0,
+    ),
+)
 
 snsplot = sns.catplot(
     x="nsamples",
@@ -649,17 +666,19 @@ df_melted = pd.melt(
 )
 df_melted.loc[:, "nsnps"].replace(100000.0, "100k", inplace=True)
 df_melted.loc[:, "nsnps"].replace(1000000.0, "1m", inplace=True)
-sns.set(style="whitegrid", palette=sns.color_palette("muted", n_colors=6, desat=1.0))
+sns.set(
+    style="whitegrid", palette=sns.color_palette("dark:#69d", n_colors=2, desat=1.0)
+)
 
 fig = plt.figure(figsize=(6.4, 6.4))
 ax = sns.lineplot(
     data=df_melted,
     x="nsamples",
     y="value",
-    hue="file_type",
-    hue_order=["0125", "PLINK", "VCF", "ALL"],
-    palette="tab10",
-    style="nsnps",
+    hue="nsnps",
+    # hue_order=["0125", "PLINK", "VCF", "ALL"],
+    # palette="tab10",
+    style="file_type",
     ci=None,
     legend="auto",
     markers=True,
@@ -709,7 +728,9 @@ df_melted = pd.melt(
     var_name="Format",
 )
 df_melted.loc[:, "nsamples"] = df_melted["nsamples"].astype(np.int)
-sns.set(style="whitegrid", palette=sns.color_palette("muted", n_colors=6, desat=1.0))
+sns.set(
+    style="whitegrid", palette=sns.color_palette("dark:#69d", n_colors=3, desat=1.0)
+)
 
 snsplot = sns.catplot(
     x="nsamples",
@@ -739,17 +760,22 @@ df_melted = pd.melt(
     id_vars=["experiment_id", "compression_method", "file_type", "nsnps", "nsamples"],
     value_vars=["delete_individual"],
 )
-sns.set(style="whitegrid", palette=sns.color_palette("muted", n_colors=6, desat=1.0))
+df_melted.loc[df_melted["nsnps"] == 50000000, "nsnps"] = nsnps_ids[float(50000000)]
+df_melted.loc[df_melted["nsnps"] == 1000000, "nsnps"] = nsnps_ids[float(1000000)]
+df_melted.loc[df_melted["nsnps"] == 100000, "nsnps"] = nsnps_ids[float(100000)]
+sns.set(
+    style="whitegrid", palette=sns.color_palette("dark:#69d", n_colors=2, desat=1.0)
+)
 
 fig = plt.figure(figsize=(6.4, 6.4))
 ax = sns.lineplot(
     data=df_melted,
     x="nsamples",
     y="value",
-    hue="file_type",
-    hue_order=["0125", "PLINK", "VCF", "ALL"],
-    palette="tab10",
-    style="nsnps",
+    hue="nsnps",
+    # hue_order=["0125", "PLINK", "VCF", "ALL"],
+    # palette="tab10",
+    style="file_type",
     ci=None,
     legend="auto",
     markers=True,
@@ -795,7 +821,9 @@ df_melted = pd.melt(
     id_vars=["exp_27"],
     value_vars=["time"],
 )
-sns.set(style="whitegrid", palette=sns.color_palette("Paired", n_colors=2, desat=1.0))
+sns.set(
+    style="whitegrid", palette=sns.color_palette("dark:#69d", n_colors=2, desat=1.0)
+)
 snsplot = sns.catplot(
     x="exp_27",
     y="value",
@@ -826,7 +854,9 @@ df_melted = pd.melt(
     value_vars=["fsize", "dbsize"],
 )
 df_melted["value"] /= 1024 ** 2
-sns.set(style="whitegrid", palette=sns.color_palette("muted", n_colors=6, desat=1.0))
+sns.set(
+    style="whitegrid", palette=sns.color_palette("dark:#69d", n_colors=2, desat=1.0)
+)
 snsplot = sns.catplot(
     x="exp_27",
     y="value",
