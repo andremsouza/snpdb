@@ -6,7 +6,7 @@ It expects it to be named "config.js" and exist in the working directory.
 """
 
 from abc import ABC, abstractmethod
-from pymongo import MongoClient, UpdateOne
+from pymongo import MongoClient, UpdateOne, ASCENDING
 from gridfs import GridFS
 import json
 import os
@@ -280,10 +280,7 @@ _MAPSNPS = _db[_config["MAPSNPS_COLL"]]
 _GFS = GridFS(_db)
 
 
-def delete_individuals(id=None,
-                       tatoo=None,
-                       sample_map=None,
-                       sample_id=None) -> list:
+def delete_individuals(id=None, tatoo=None, sample_map=None, sample_id=None) -> list:
     """Searches and deletes all data from individuals in the database.
 
     Returns a list with the status of the delete operations.
@@ -302,28 +299,29 @@ def delete_individuals(id=None,
     individuals: list = find_individuals(id, tatoo, sample_map, sample_id)
     samples = [
         (s[_config["SAMPLES_MAP_ATTR"]], s[_config["SAMPLES_ID_ATTR"]])
-        for ss in
-        [ind[_config["INDIVIDUALS_SAMPLE_LIST_ATTR"]] for ind in individuals]
+        for ss in [ind[_config["INDIVIDUALS_SAMPLE_LIST_ATTR"]] for ind in individuals]
         for s in ss
     ]
     if len(individuals):
         query_snpblocks: dict = {
-            "$or": [{
-                _config["SNPBLOCKS_MAP_ATTR"]: map_name,
-                _config["SNPBLOCKS_SAMPLE_ATTR"]: sample_id
-            } for map_name, sample_id in samples]
+            "$or": [
+                {
+                    _config["SNPBLOCKS_MAP_ATTR"]: map_name,
+                    _config["SNPBLOCKS_SAMPLE_ATTR"]: sample_id,
+                }
+                for map_name, sample_id in samples
+            ]
         }
         query_samples: dict = {
-            "$or": [{
-                _config["SAMPLES_MAP_ATTR"]: map_name,
-                _config["SAMPLES_ID_ATTR"]: sample_id
-            } for map_name, sample_id in samples]
+            "$or": [
+                {
+                    _config["SAMPLES_MAP_ATTR"]: map_name,
+                    _config["SAMPLES_ID_ATTR"]: sample_id,
+                }
+                for map_name, sample_id in samples
+            ]
         }
-        query_individuals: dict = {
-            "$or": [{
-                "_id": ind["_id"]
-            } for ind in individuals]
-        }
+        query_individuals: dict = {"$or": [{"_id": ind["_id"]} for ind in individuals]}
         result.append(_SNPBLOCKS.delete_many(query_snpblocks))
         result.append(_SAMPLES.delete_many(query_samples))
         result.append(_INDS.delete_many(query_individuals))
@@ -425,7 +423,8 @@ def find_maps(id=None, min_size=None, max_size=None, format=None):
                 _config["MAPS_SIZE_ATTR"]: 1,
                 _config["MAPS_BLOCK_SIZE_ATTR"]: 1,
             },
-        ))
+        )
+    )
 
 
 def get_map_snps(id):
@@ -438,8 +437,9 @@ def get_map_snps(id):
     ----------
     id      The map's id.
     """
-    cur = _MAPSNPS.find({_config["MAPSNPS_MAP_ATTR"]: id},
-                        sort=[(_config["MAPSNPS_IDX_ATTR"], 1)])
+    cur = _MAPSNPS.find(
+        {_config["MAPSNPS_MAP_ATTR"]: id}, sort=[(_config["MAPSNPS_IDX_ATTR"], 1)]
+    )
     snps, ssnps = [], []
     for doc in cur:
         snps.extend(doc[_config["MAPSNPS_LIST_ATTR"]])
@@ -467,12 +467,14 @@ def find_individuals(id=None, tatoo=None, sample_map=None, sample_id=None):
     if tatoo is not None:
         query.update({_config["INDIVIDUALS_ID_LIST_ATTR"]: tatoo})
     if sample_map is not None:
-        attr = (_config["INDIVIDUALS_SAMPLE_LIST_ATTR"] + "." +
-                _config["SAMPLES_MAP_ATTR"])
+        attr = (
+            _config["INDIVIDUALS_SAMPLE_LIST_ATTR"] + "." + _config["SAMPLES_MAP_ATTR"]
+        )
         query.update({attr: sample_map})
     if sample_id is not None:
-        attr = (_config["INDIVIDUALS_SAMPLE_LIST_ATTR"] + "." +
-                _config["SAMPLES_ID_ATTR"])
+        attr = (
+            _config["INDIVIDUALS_SAMPLE_LIST_ATTR"] + "." + _config["SAMPLES_ID_ATTR"]
+        )
         query.update({attr: sample_id})
     return list(_INDS.find(query))
 
@@ -510,29 +512,28 @@ def find_individuals_of_snps(
     # _SNPS -> _MAPS -> _SAMPLES -> _INDS
     # Find maps of given SNPs
     maps: list = list(
-        set([
-            map for maps in [snp[_config["SNPS_MAPS_ATTR"]] for snp in snps]
-            for map in maps
-        ]))
+        set(
+            [
+                map
+                for maps in [snp[_config["SNPS_MAPS_ATTR"]] for snp in snps]
+                for map in maps
+            ]
+        )
+    )
     # Find samples of associated maps
     if len(maps) == 0:
         return []  # No associated maps -> no associated individuals
-    query_samples: dict = {
-        "$or": [{
-            _config["SAMPLES_MAP_ATTR"]: map
-        } for map in maps]
-    }
+    query_samples: dict = {"$or": [{_config["SAMPLES_MAP_ATTR"]: map} for map in maps]}
     samples: list = _SAMPLES.find(query_samples)
     # Find individuals of associated samples
-    map_attr: str = str(_config["INDIVIDUALS_SAMPLE_LIST_ATTR"] + "." +
-                        _config["SAMPLES_MAP_ATTR"])
-    id_attr: str = str(_config["INDIVIDUALS_SAMPLE_LIST_ATTR"] + "." +
-                       _config["SAMPLES_ID_ATTR"])
+    map_attr: str = str(
+        _config["INDIVIDUALS_SAMPLE_LIST_ATTR"] + "." + _config["SAMPLES_MAP_ATTR"]
+    )
+    id_attr: str = str(
+        _config["INDIVIDUALS_SAMPLE_LIST_ATTR"] + "." + _config["SAMPLES_ID_ATTR"]
+    )
     query_individuals: dict = {
-        "$or": [{
-            map_attr: sample["map"],
-            id_attr: sample["id"]
-        } for sample in samples]
+        "$or": [{map_attr: sample["map"], id_attr: sample["id"]} for sample in samples]
     }
     return list(_INDS.find(query_individuals))
 
@@ -556,16 +557,10 @@ def find_snp_of_sample(mapname, sample, snp_id):
     try:
         map = find_maps(id=mapname)[0]
         pipeline = [
-            {
-                "$match": {
-                    MAP: mapname
-                }
-            },
+            {"$match": {MAP: mapname}},
             {
                 "$project": {
-                    "idx": {
-                        "$indexOfArray": ["$" + SORTED_SNPS, snp_id]
-                    },
+                    "idx": {"$indexOfArray": ["$" + SORTED_SNPS, snp_id]},
                     IDX: 1,
                 }
             },
@@ -577,11 +572,13 @@ def find_snp_of_sample(mapname, sample, snp_id):
                 pos = index % map[BLOCK_SIZE]
                 break
 
-        block = _SNPBLOCKS.find_one({
-            _config["SNPBLOCKS_MAP_ATTR"]: mapname,
-            _config["SNPBLOCKS_BLOCK_NUMBER"]: blk,
-            _config["SNPBLOCKS_SAMPLE_ATTR"]: sample,
-        })
+        block = _SNPBLOCKS.find_one(
+            {
+                _config["SNPBLOCKS_MAP_ATTR"]: mapname,
+                _config["SNPBLOCKS_BLOCK_NUMBER"]: blk,
+                _config["SNPBLOCKS_SAMPLE_ATTR"]: sample,
+            }
+        )
 
     except (IndexError, ValueError, UnboundLocalError):
         return None
@@ -616,13 +613,13 @@ def find_sample(id=None, map=None):
 def get_sample_data(id, map):
     """Retrive sample data.
 
-       The data is returned as a dict, following the same format produced by
-       the SampleWriter used to import it.
+    The data is returned as a dict, following the same format produced by
+    the SampleWriter used to import it.
 
-       Parameters
-       ----------
-       id   The sample within-map id.
-       map  The sample's associated map.
+    Parameters
+    ----------
+    id   The sample within-map id.
+    map  The sample's associated map.
     """
     samples = find_sample(id, map)
     if len(samples) > 1:
@@ -642,11 +639,9 @@ def get_sample_data(id, map):
     SNPBLOCKS_MAP = _config["SNPBLOCKS_MAP_ATTR"]
     SNPBLOCKS_SAMPLE = _config["SNPBLOCKS_SAMPLE_ATTR"]
     SNPBLOCKS_NO = _config["SNPBLOCKS_BLOCK_NUMBER"]
-    blocks = _SNPBLOCKS.find({
-        SNPBLOCKS_MAP: map,
-        SNPBLOCKS_SAMPLE: id
-    },
-                             sort=[(SNPBLOCKS_NO, 1)])
+    blocks = _SNPBLOCKS.find(
+        {SNPBLOCKS_MAP: map, SNPBLOCKS_SAMPLE: id}, sort=[(SNPBLOCKS_NO, 1)]
+    )
     genotype = {}
     for block in blocks:
         g = block[_config["SNPBLOCKS_GENOTYPE"]]
@@ -710,7 +705,7 @@ def list_files(**kwargs):
         "filename": _config["FILES_FILENAME"],
         "individual_id": "metadata." + _config["FILES_INDIVIDUAL_ATTR"],
         "file_type": "metadata." + _config["FILES_TYPE"],
-        "description": "metadata." + _config["FILES_DESCRIPTION"]
+        "description": "metadata." + _config["FILES_DESCRIPTION"],
     }
     # Building query
     query = {}
@@ -744,11 +739,14 @@ def get_files(files):
             f.write(grid_out.read())
 
 
-def import_map(map_reader,
-               map_name,
-               force_create_new=False,
-               force_use_existing=False,
-               report=False):
+def import_map(
+    map_reader,
+    map_name,
+    force_create_new=False,
+    force_use_existing=False,
+    report=False,
+    rebuild_indexes=False,
+):
     """Import map into the database using a MapReader.
 
     Parameters
@@ -774,6 +772,11 @@ def import_map(map_reader,
                                 time.
     report=False                If True, import results are printed after
                                 finished. If False, nothing is printed.
+    rebuild_indexes=False       If True, drop index before import, recreate
+                                after finishing the operation.
+                                Warning: only use this option if a large volume
+                                of data is being imported, as recreating an index
+                                takes may take a large amount of time.
     """
 
     if len(find_maps(id=map_name)) > 0:
@@ -787,6 +790,11 @@ def import_map(map_reader,
     if snp_ids is None:
         return
 
+    # Drop indexes if rebuild_indexes is True
+    if rebuild_indexes:
+        _MAPS.drop_indexes()
+        _MAPSNPS.drop_indexes()
+        _SNPS.drop_indexes()
     # Insert new map into maps collection.
     map_doc = {
         "_id": map_name,
@@ -801,54 +809,77 @@ def import_map(map_reader,
     BS = _config["MAPSNPS_MAX_LIST_SIZE"]
     snp_list = [x[0] for x in snp_ids]
     s_snp_list = sorted(snp_list)
-    _MAPSNPS.insert_many(({
-        _config["MAPSNPS_MAP_ATTR"]:
-        map_name,
-        _config["MAPSNPS_IDX_ATTR"]:
-        i,
-        _config["MAPSNPS_LIST_ATTR"]:
-        snp_list[i * BS:i * BS + BS],
-        _config["MAPSNPS_SORTED_LIST_ATTR"]:
-        s_snp_list[i * BS:i * BS + BS],
-    } for i in range(0, (nsnps - 1) // BS + 1)))
+    _MAPSNPS.insert_many(
+        (
+            {
+                _config["MAPSNPS_MAP_ATTR"]: map_name,
+                _config["MAPSNPS_IDX_ATTR"]: i,
+                _config["MAPSNPS_LIST_ATTR"]: snp_list[i * BS : i * BS + BS],
+                _config["MAPSNPS_SORTED_LIST_ATTR"]: s_snp_list[i * BS : i * BS + BS],
+            }
+            for i in range(0, (nsnps - 1) // BS + 1)
+        )
+    )
 
     # Insert new SNPs into snps collection.
     new_snps = [
         __adjust_snp(snp, map_reader, snp_ids[i][0])
-        for (i, snp) in enumerate(map_reader) if snp_ids[i][1]
+        for (i, snp) in enumerate(map_reader)
+        if snp_ids[i][1]
     ]
     if len(new_snps) > 0:
         _SNPS.insert_many(new_snps)
 
     # For each SNP (old or new), add the new map to the SNP's map list.
-    _SNPS.bulk_write([
-        UpdateOne({"_id": snp_ids[j][0]},
-                  {"$push": {
-                      _config["SNPS_MAPS_ATTR"]: map_name
-                  }}) for j in range(nsnps)
-    ])
+    _SNPS.bulk_write(
+        [
+            UpdateOne(
+                {"_id": snp_ids[j][0]}, {"$push": {_config["SNPS_MAPS_ATTR"]: map_name}}
+            )
+            for j in range(nsnps)
+        ]
+    )
+
+    # Create indexes if rebuild_indexes is True
+    if rebuild_indexes:
+        _MAPS.create_index("_id")
+        _MAPSNPS.create_index("_id")
+        _MAPSNPS.create_index([("map", ASCENDING), ("i", ASCENDING)], unique=True)
+        _SNPS.create_index("_id")
+        _SNPS.create_index("i")
+        _SNPS.create_index([("c", ASCENDING), ("p", ASCENDING)])
+        _SNPS.create_index("m")
 
     if report:
-        print(f"Added map {map_name} with {nsnps} SNPs, " +
-              f"{len(new_snps)} new SNPs created.")
+        print(
+            f"Added map {map_name} with {nsnps} SNPs, "
+            + f"{len(new_snps)} new SNPs created."
+        )
 
 
-def import_samples(sample_reader, map_name, id_map={}, report=False):
+def import_samples(
+    sample_reader, map_name, id_map={}, report=False, rebuild_indexes=False
+):
     """Import samples into the database using a SampleReader.
 
     Parameters
     ----------
-    sample_reader   A SampleReader instance.
-    map_name        The map id associated with the samples being imported.
-                    Must exist on the database.
-    id_map={}       A dict associating sample IDs (key) with individual
-                    tatoos (value). Sample IDs which have an associated
-                    individual tatoo will be associated to the individual
-                    in question. If it doesn't exist, it'll be created.
-                    If more than one exists with the same tatoo, the user
-                    will be asked to choose between them.
-    report=False    If True, import results are printed after finished.
-                    IF False, nothing is printed.
+    sample_reader               A SampleReader instance.
+    map_name                    The map id associated with the samples being imported.
+                                Must exist on the database.
+    id_map={}                   A dict associating sample IDs (key) with individual
+                                tatoos (value). Sample IDs which have an associated
+                                individual tatoo will be associated to the individual
+                                in question. If it doesn't exist, it'll be created.
+                                If more than one exists with the same tatoo, the user
+                                will be asked to choose between them.
+    report=False                If True, import results are printed after finished.
+                                IF False, nothing is printed.
+    rebuild_indexes=False       If True, drop index before import, recreate
+                                after finishing the operation.
+                                Warning: only use this option if a large volume
+                                of data is being imported, as recreating an index
+                                takes may take a large amount of time.
     """
     try:
         m = find_maps(id=map_name)[0]
@@ -862,6 +893,12 @@ def import_samples(sample_reader, map_name, id_map={}, report=False):
     new_blocks = 0
     new_individuals = 0
     old_individuals = 0
+
+    # Drop indexes if rebuild_indexes is True
+    if rebuild_indexes:
+        _SAMPLES.drop_indexes()
+        _SNPBLOCKS.drop_indexes()
+        _INDS.drop_indexes()
 
     for sample in sample_reader:
         genotype = sample.pop(sample_reader.SAMPLE_GENOTYPE)
@@ -885,11 +922,10 @@ def import_samples(sample_reader, map_name, id_map={}, report=False):
         for key in genotype:
             if isinstance(genotype[key], str):
                 genotype[key] = "".join(
-                    [x for _, x in sorted(zip(snps, genotype[key]))])
+                    [x for _, x in sorted(zip(snps, genotype[key]))]
+                )
             else:
-                genotype[key] = [
-                    str(x) for _, x in sorted(zip(snps, genotype[key]))
-                ]
+                genotype[key] = [str(x) for _, x in sorted(zip(snps, genotype[key]))]
 
         # Break genotype into blocks and insert into SNP blocks collection.
         current_block = 0
@@ -897,16 +933,17 @@ def import_samples(sample_reader, map_name, id_map={}, report=False):
             b_genotype = {}
             for key in genotype:
                 if isinstance(genotype[key], str):
-                    b_genotype[key] = genotype[key][i:i + bsize]
+                    b_genotype[key] = genotype[key][i : i + bsize]
                 else:
-                    b_genotype[key] = " " + " ".join(
-                        genotype[key][i:i + bsize])
-            _SNPBLOCKS.insert_one({
-                _config["SNPBLOCKS_MAP_ATTR"]: map_name,
-                _config["SNPBLOCKS_SAMPLE_ATTR"]: id,
-                _config["SNPBLOCKS_BLOCK_NUMBER"]: current_block,
-                _config["SNPBLOCKS_GENOTYPE"]: b_genotype,
-            })
+                    b_genotype[key] = " " + " ".join(genotype[key][i : i + bsize])
+            _SNPBLOCKS.insert_one(
+                {
+                    _config["SNPBLOCKS_MAP_ATTR"]: map_name,
+                    _config["SNPBLOCKS_SAMPLE_ATTR"]: id,
+                    _config["SNPBLOCKS_BLOCK_NUMBER"]: current_block,
+                    _config["SNPBLOCKS_GENOTYPE"]: b_genotype,
+                }
+            )
             new_blocks += 1
             current_block += 1
 
@@ -920,28 +957,39 @@ def import_samples(sample_reader, map_name, id_map={}, report=False):
             elif len(individuals) == 1:
                 option = 1
             if option == 0:
-                _INDS.insert_one({
-                    "_id":
-                    __next_individual_id(),
-                    _config["INDIVIDUALS_ID_LIST_ATTR"]: [id_map[id]],
-                    _config["INDIVIDUALS_SAMPLE_LIST_ATTR"]: [sample_key],
-                })
+                _INDS.insert_one(
+                    {
+                        "_id": __next_individual_id(),
+                        _config["INDIVIDUALS_ID_LIST_ATTR"]: [id_map[id]],
+                        _config["INDIVIDUALS_SAMPLE_LIST_ATTR"]: [sample_key],
+                    }
+                )
                 new_individuals += 1
             else:
                 _INDS.update_one(
                     {"_id": individuals[option - 1]["_id"]},
-                    {
-                        "$push": {
-                            _config["INDIVIDUALS_SAMPLE_LIST_ATTR"]: sample_key
-                        }
-                    },
+                    {"$push": {_config["INDIVIDUALS_SAMPLE_LIST_ATTR"]: sample_key}},
                 )
                 old_individuals += 1
 
+    # Create indexes if rebuild_indexes is True
+    if rebuild_indexes:
+        _SAMPLES.create_index("_id")
+        _SAMPLES.create_index([("map", ASCENDING), ("id", ASCENDING)], unique=True)
+        _SAMPLES.create_index("id")
+        _SNPBLOCKS.create_index("_id")
+        _SNPBLOCKS.create_index([("m", ASCENDING), ("s", ASCENDING), ("no", ASCENDING)])
+        _INDS.create_index("_id")
+        _INDS.create_index("tatoos")
+        _INDS.create_index("samples.map")
+        _INDS.create_index("samples.id")
+
     if report:
-        print(f"{new_samples} samples added, {new_blocks} blocks, " +
-              f"{new_individuals} individuals created, " +
-              f"{old_individuals} pre-existing individuals updated.")
+        print(
+            f"{new_samples} samples added, {new_blocks} blocks, "
+            + f"{new_individuals} individuals created, "
+            + f"{old_individuals} pre-existing individuals updated."
+        )
 
 
 def export_map(id, map_writer, out_file_path):
@@ -990,8 +1038,7 @@ def export_samples(samples, map, sample_writer, out_file_path):
     wsamples = []
     if len(samples) == 0:
         samples = [
-            sample[_config["SAMPLES_ID_ATTR"]]
-            for sample in find_sample(map=map)
+            sample[_config["SAMPLES_ID_ATTR"]] for sample in find_sample(map=map)
         ]
     for id in samples:
         current = {
@@ -1031,37 +1078,33 @@ def summarize(individuals: Union[dict, list]) -> list:
         individuals = [individuals]
 
     for ind in individuals:
-        ind_result: dict = {
-            "individual_id": ind["_id"],
-            "files": [],
-            "files_count": 0
-        }
+        ind_result: dict = {"individual_id": ind["_id"], "files": [], "files_count": 0}
         maps: dict = {}  # dict of maps to retrieve number of snps from
         # Retrieving maps/samples with formats
         for sample in ind[_config["INDIVIDUALS_SAMPLE_LIST_ATTR"]]:
             map_name: str = sample[_config["SAMPLES_MAP_ATTR"]]
             sample_id: str = sample[_config["SAMPLES_ID_ATTR"]]
             try:
-                map_format: str = find_maps(
-                    id=map_name)[0][_config["MAPS_FORMAT_ATTR"]]
+                map_format: str = find_maps(id=map_name)[0][_config["MAPS_FORMAT_ATTR"]]
             except IndexError:
                 print(f"Warning: couldn't retrieve format for map {map_name}")
             else:
                 maps.setdefault(map_format, set())
                 maps[map_format].add(map_name)
-                ind_result[map_format + "_sample_count"] = ind_result.get(
-                    map_format + "_sample_count", 0) + 1
+                ind_result[map_format + "_sample_count"] = (
+                    ind_result.get(map_format + "_sample_count", 0) + 1
+                )
                 ind_result[map_format + "_sample"] = ind_result.get(
-                    map_format + "_sample", []) + [(map_name, sample_id)]
+                    map_format + "_sample", []
+                ) + [(map_name, sample_id)]
         # Retrieving snps associated with ind
         for map_format in maps.keys():
             query_snps: dict = {
-                _config["SNPS_MAPS_ATTR"]: {
-                    "$in": list(maps[map_format])
-                }
+                _config["SNPS_MAPS_ATTR"]: {"$in": list(maps[map_format])}
             }
             ind_result[map_format + "_snps_count"] = _SNPS.count_documents(
-                filter=query_snps)
+                filter=query_snps
+            )
         # Retrieving files of individual
         files = list_files(individual_id=ind["_id"])
         ind_result["files"] = []
@@ -1070,20 +1113,26 @@ def summarize(individuals: Union[dict, list]) -> list:
                 ind_result["files"].append(f["filename"])
             except KeyError as e:
                 print(
-                    "Warning (", e,
+                    "Warning (",
+                    e,
                     "): couldn't retrieve filename for file associated with",
-                    f"individual {ind['_id']}")
+                    f"individual {ind['_id']}",
+                )
             # Retrieving count of files by type
             try:
-                ind_result[f["metadata"][_config["FILES_TYPE"]] +
-                           "_file_count"] = ind_result.get(
-                               f["metadata"][_config["FILES_TYPE"]] +
-                               "_file_count", 0) + 1
+                ind_result[f["metadata"][_config["FILES_TYPE"]] + "_file_count"] = (
+                    ind_result.get(
+                        f["metadata"][_config["FILES_TYPE"]] + "_file_count", 0
+                    )
+                    + 1
+                )
             except KeyError as e:
                 print(
-                    "Warning (", e,
+                    "Warning (",
+                    e,
                     "): couldn't retrieve file type for file associated with",
-                    f"individual {ind['_id']}")
+                    f"individual {ind['_id']}",
+                )
         # Appending individual summary to result
         result.append(ind_result)
     return result
@@ -1105,9 +1154,7 @@ def get_db_stats(scale=1):
 def __reserve_snp_ids(cnt):
     doc = _COUNTERS.find_one_and_update(
         {"_id": _config["SNPS_COLL"]},
-        {"$inc": {
-            _config["COUNTERS_SEQ_VALUE_ATTR"]: cnt
-        }},
+        {"$inc": {_config["COUNTERS_SEQ_VALUE_ATTR"]: cnt}},
     )
     return doc[_config["COUNTERS_SEQ_VALUE_ATTR"]]
 
@@ -1136,9 +1183,7 @@ def __rev_adjust_snp(snp, map_writer):
 
 def __find_similar_snps(snp):
     query = {}
-    for attr in [
-            _config["SNPS_CHROMOSOME_ATTR"], _config["SNPS_POSITION_ATTR"]
-    ]:
+    for attr in [_config["SNPS_CHROMOSOME_ATTR"], _config["SNPS_POSITION_ATTR"]]:
         if attr not in snp:
             return []
         query[attr] = snp[attr]
@@ -1166,9 +1211,11 @@ def __user_snp_choice(snp, conflicts, force_use_existing):
         options.add("n")
         options.add("N")
         if len(conflicts) == 1:
-            question += ("; [e] - always use existing SNP"
-                         " (you'll still be asked when there's"
-                         " more than one option)")
+            question += (
+                "; [e] - always use existing SNP"
+                " (you'll still be asked when there's"
+                " more than one option)"
+            )
             options.add("e")
             options.add("E")
     question += ": "
@@ -1185,8 +1232,9 @@ def __user_snp_choice(snp, conflicts, force_use_existing):
 
 def __fill_snp_ids(map_reader, force_create_new, force_use_existing):
     if force_create_new and force_use_existing:
-        raise Exception("force_create_new and force_use_existing cannot"
-                        " be used simultaneously.")
+        raise Exception(
+            "force_create_new and force_use_existing cannot" " be used simultaneously."
+        )
     next_id = __reserve_snp_ids(len(map_reader))
     snp_ids = []
     for snp in map_reader:
@@ -1242,8 +1290,6 @@ def __user_individual_choice(tatoo, individuals):
 def __next_individual_id():
     doc = _COUNTERS.find_one_and_update(
         {"_id": _config["INDIVIDUALS_COLL"]},
-        {"$inc": {
-            _config["COUNTERS_SEQ_VALUE_ATTR"]: 1
-        }},
+        {"$inc": {_config["COUNTERS_SEQ_VALUE_ATTR"]: 1}},
     )
     return doc[_config["COUNTERS_SEQ_VALUE_ATTR"]]
