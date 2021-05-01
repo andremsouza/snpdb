@@ -41,7 +41,7 @@ class MapReader(ABC):
     MAP_FORMAT = "format"  # TODO: make this come from config
 
     def __init__(self, map_file):
-        """Initializes the class to in order extract SNPs from given file.
+        """Initialize the class to in order extract SNPs from given file.
 
         Attributes
         ----------
@@ -51,7 +51,7 @@ class MapReader(ABC):
 
     @abstractmethod
     def __iter__(self):
-        """Returns an iterator that reads and extracts SNPs from _MAP_FILE.
+        """Return an iterator that reads and extracts SNPs from _MAP_FILE.
 
         Abstract method. Must return an iterator which reads the file
         located in _MAP_FILE and, for each iteration, returns a dict instance
@@ -67,7 +67,7 @@ class MapReader(ABC):
 
     @abstractmethod
     def __len__(self):
-        """Returns the number of SNPs contained in _MAP_FILE.
+        """Return the number of SNPs contained in _MAP_FILE.
 
         Abstract method. Must return number of readable SNPs from _MAP_FILE.
 
@@ -78,7 +78,7 @@ class MapReader(ABC):
 
     @abstractmethod
     def map_meta(self):
-        """Returns a dict containing map metadata for _MAP_FILE.
+        """Return a dict containing map metadata for _MAP_FILE.
 
         The only key with special significance is the one whose name
         is contained in MAP_FORMAT. It should contain an identifier
@@ -115,7 +115,7 @@ class SampleReader(ABC):
     SAMPLE_GENOTYPE = "genotype"
 
     def __init__(self, ped_file):
-        """Initializes the class to in order extract samples from given file.
+        """Initialize the class to in order extract samples from given file.
 
         Attributes
         ----------
@@ -125,7 +125,7 @@ class SampleReader(ABC):
 
     @abstractmethod
     def __iter__(self):
-        """Returns an iterator that reads and extracts samples from _PED_FILE.
+        """Return an iterator that reads and extracts samples from _PED_FILE.
 
         Abstract method. Must return an iterator which reads the file
         located in _PED_FILE and, for each iteration, returns a dict instance
@@ -140,7 +140,7 @@ class SampleReader(ABC):
 
     @abstractmethod
     def __len__(self):
-        """Returns the number of samples contained in _PED_FILE.
+        """Return the number of samples contained in _PED_FILE.
 
         Abstract method. Must return number of readable samples from
         _PED_FILE.
@@ -176,7 +176,7 @@ class MapWriter(ABC):
     SNP_POS = MapReader.SNP_POS
 
     def __init__(self, snps):
-        """Initializes the writer with the appropriate SNP data.
+        """Initialize the writer with the appropriate SNP data.
 
         Attributes
         ----------
@@ -219,7 +219,7 @@ class SampleWriter(ABC):
     SAMPLE_GENOTYPE = SampleReader.SAMPLE_GENOTYPE
 
     def __init__(self, samples):
-        """Initializes the writer with the appropriate sample data.
+        """Initialize the writer with the appropriate sample data.
 
         Attributes
         ----------
@@ -281,7 +281,7 @@ _GFS = GridFS(_db)
 
 
 def delete_individuals(id=None, tatoo=None, sample_map=None, sample_id=None) -> list:
-    """Searches and deletes all data from individuals in the database.
+    """Search and delete all data from individuals in the database.
 
     Returns a list with the status of the delete operations.
 
