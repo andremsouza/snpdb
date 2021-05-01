@@ -30,7 +30,7 @@ exps: dict = {
     "1.B": {
         "compression_methods": {"snappy", "zlib"},
         "file_type": "PLINK",
-        "nsnps_list": [100000.0, 1000000.0],
+        "nsnps_list": [100000.0, 1000000.0, 50000000.0],
         "nsamples_list": [1.0],
         "readers": {"map": readers.PlinkMapReader, "ped": readers.PlinkSampleReader},
         "file_extensions": {"map": ".plmap", "ped": ".plped", "ids": ".plids"},
@@ -100,11 +100,7 @@ exps: dict = {
     "2.A": {
         "compression_methods": {"snappy", "zlib"},
         "file_type": "0125",
-        "nsnps_list": [
-            100000.0,
-            1000000.0,
-            50000000.0,
-        ],
+        "nsnps_list": [100000.0, 1000000.0, 50000000.0],
         "nsamples_list": [
             1.0,
             5.0,
@@ -145,7 +141,7 @@ exps: dict = {
     "2.C": {
         "compression_methods": {"snappy", "zlib"},
         "file_type": "PLINK",
-        "nsnps_list": [100000.0, 1000000.0],
+        "nsnps_list": [100000.0, 1000000.0, 50000000.0],
         "nsamples_list": [
             1.0,
             5.0,
